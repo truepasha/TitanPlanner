@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using DirectShowLib;
 using MissionPlanner.Utilities;
@@ -504,7 +505,7 @@ namespace MissionPlanner.Controls
                 StopAllHudSources();
                 lock (_videoDeviceLock)
                 {
-                    MainV2.cam = new Capture(cmbVideoSources.SelectedIndex, bmp.Media);
+                    MainV2.cam = CreateVideoCaptureWithRetry(cmbVideoSources.SelectedIndex, bmp.Media);
                     MainV2.cam.Start();
                 }
 
@@ -668,6 +669,27 @@ namespace MissionPlanner.Controls
             }
 
             GCSViews.FlightData.myhud.bgimage = null;
+        }
+
+        private static Capture CreateVideoCaptureWithRetry(int selectedIndex, AMMediaType media)
+        {
+            Exception lastError = null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    return new Capture(selectedIndex, media);
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    Thread.Sleep(200);
+                }
+            }
+
+            throw lastError ?? new Exception("Unable to start video device");
         }
 
         private void SyncStreamControlStates()

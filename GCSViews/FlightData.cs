@@ -208,7 +208,6 @@ namespace MissionPlanner.GCSViews
             _hudWebViewHadSuccessfulCapture = false;
             _hudWebViewOfflineMessageShown = false;
             _hudWebViewSessionId++;
-            var activeSessionId = _hudWebViewSessionId;
 
             _hudWebView.CoreWebView2.Navigate("about:blank");
             _hudWebView.CoreWebView2.Navigate(url);
@@ -229,8 +228,9 @@ namespace MissionPlanner.GCSViews
                     try
                     {
                         _hudWebViewCaptureBuffer.SetLength(0);
+                        var captureSessionId = _hudWebViewSessionId;
                         await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Jpeg, _hudWebViewCaptureBuffer);
-                        if (activeSessionId != _hudWebViewSessionId)
+                        if (captureSessionId != _hudWebViewSessionId)
                             return;
 
                         _hudWebViewCaptureBuffer.Position = 0;
@@ -313,7 +313,13 @@ namespace MissionPlanner.GCSViews
             var stretchedFrame = new Bitmap(myhud.Width, myhud.Height);
             using (var graphics = Graphics.FromImage(stretchedFrame))
             {
-                graphics.DrawImage(image, 0, 0, stretchedFrame.Width, stretchedFrame.Height);
+                var scale = Math.Max((float)stretchedFrame.Width / image.Width, (float)stretchedFrame.Height / image.Height);
+                var drawWidth = (int)(image.Width * scale);
+                var drawHeight = (int)(image.Height * scale);
+                var drawX = (stretchedFrame.Width - drawWidth) / 2;
+                var drawY = (stretchedFrame.Height - drawHeight) / 2;
+
+                graphics.DrawImage(image, drawX, drawY, drawWidth, drawHeight);
             }
 
             return stretchedFrame;
@@ -340,7 +346,7 @@ namespace MissionPlanner.GCSViews
             if (_hudWebView?.CoreWebView2 == null)
                 return;
 
-            var objectFit = _hudWebViewStretchToHud ? "fill" : "contain";
+            var objectFit = _hudWebViewStretchToHud ? "cover" : "contain";
             var script =
                 "(function() {" +
                 "document.documentElement.style.margin='0';" +
