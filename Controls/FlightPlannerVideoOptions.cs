@@ -4,8 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using DirectShowLib;
 using MissionPlanner.Utilities;
@@ -33,8 +32,7 @@ namespace MissionPlanner.Controls
         private MyButton btnVideoStop;
         private CheckBox chkHudShow;
         private bool startup = true;
-        private CancellationTokenSource _httpStreamCts;
-        private Task _httpStreamTask;
+        private bool _httpStreamRunning;
 
         public FlightPlannerVideoOptions()
         {
@@ -637,7 +635,9 @@ namespace MissionPlanner.Controls
             catch (Exception ex)
             {
                 btnWebStreamStart.Enabled = true;
-                CustomMessageBox.Show("Failed to start web stream: " + ex.Message, Strings.ERROR);
+                CustomMessageBox.Show("Failed to start web stream: " + ex.Message +
+                                      "\nUse a direct MJPEG URL (multipart/x-mixed-replace or JPEG stream), not a webpage player link.",
+                    Strings.ERROR);
             }
         }
 
@@ -662,125 +662,96 @@ namespace MissionPlanner.Controls
         private void StartHttpHudStream(Uri uri)
         {
             StopHttpHudStream();
+            var streamUrl = TryResolveMjpegUrl(uri);
+            if (string.IsNullOrWhiteSpace(streamUrl))
+                throw new InvalidOperationException("Could not resolve a direct MJPEG stream URL from the provided link.");
 
-            _httpStreamCts = new CancellationTokenSource();
-            _httpStreamTask = Task.Run(() => HttpHudStreamLoop(uri, _httpStreamCts.Token), _httpStreamCts.Token);
+            CaptureMJPEG.URL = streamUrl;
+            CaptureMJPEG.runAsync();
+            _httpStreamRunning = true;
             btnWebStreamStart.Enabled = false;
         }
 
         private void StopHttpHudStream()
         {
+            if (_httpStreamRunning)
+            {
+                CaptureMJPEG.Stop();
+                _httpStreamRunning = false;
+            }
+            btnWebStreamStart.Enabled = true;
+        }
+
+        private string TryResolveMjpegUrl(Uri inputUri)
+        {
+            bool htmlPageWithoutDirectStream = false;
+
             try
             {
-                _httpStreamCts?.Cancel();
-                _httpStreamTask?.Wait(300);
-            }
-            catch { }
-            finally
-            {
-                _httpStreamTask = null;
-                _httpStreamCts?.Dispose();
-                _httpStreamCts = null;
-                btnWebStreamStart.Enabled = true;
-            }
-        }
+                var request = (HttpWebRequest)WebRequest.Create(inputUri);
+                request.Method = "GET";
+                request.AllowAutoRedirect = true;
+                request.Timeout = 5000;
+                request.ReadWriteTimeout = 5000;
+                request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                request.UserAgent = "MissionPlanner-HUD-HTTP";
 
-        private void HttpHudStreamLoop(Uri uri, CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                try
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
-                    var request = (HttpWebRequest)WebRequest.Create(uri);
-                    request.Method = "GET";
-                    request.KeepAlive = true;
-                    request.Timeout = 10000;
-                    request.ReadWriteTimeout = 10000;
-                    request.UserAgent = "MissionPlanner-HUD-HTTP";
+                    var contentType = (response.ContentType ?? string.Empty).ToLowerInvariant();
+                    if (contentType.Contains("multipart/x-mixed-replace") || contentType.Contains("image/jpeg"))
+                        return response.ResponseUri?.ToString() ?? inputUri.ToString();
 
-                    using (var response = (HttpWebResponse)request.GetResponse())
-                    using (var stream = response.GetResponseStream())
+                    if (contentType.Contains("text/html"))
                     {
-                        if (stream == null)
-                            throw new InvalidOperationException("Empty HTTP stream.");
-
-                        ReadJpegFramesFromStream(stream, token);
+                        htmlPageWithoutDirectStream = true;
+                        using (var stream = response.GetResponseStream())
+                        using (var reader = new StreamReader(stream ?? Stream.Null))
+                        {
+                            var html = reader.ReadToEnd();
+                            var candidate = ExtractMjpegCandidateFromHtml(html, response.ResponseUri ?? inputUri);
+                            if (!string.IsNullOrWhiteSpace(candidate))
+                                return candidate;
+                        }
                     }
-                }
-                catch
-                {
-                    if (token.IsCancellationRequested)
-                        return;
-                    Thread.Sleep(1000);
-                }
-            }
-        }
-
-        private void ReadJpegFramesFromStream(Stream stream, CancellationToken token)
-        {
-            var readBuffer = new byte[16 * 1024];
-            var data = new List<byte>(512 * 1024);
-
-            while (!token.IsCancellationRequested)
-            {
-                var bytesRead = stream.Read(readBuffer, 0, readBuffer.Length);
-                if (bytesRead <= 0)
-                    break;
-
-                for (int i = 0; i < bytesRead; i++)
-                    data.Add(readBuffer[i]);
-
-                while (true)
-                {
-                    int start = FindMarker(data, 0xFF, 0xD8, 0);
-                    if (start < 0)
-                        break;
-
-                    int end = FindMarker(data, 0xFF, 0xD9, start + 2);
-                    if (end < 0)
-                        break;
-
-                    int frameLen = end - start + 2;
-                    if (frameLen > 2)
-                    {
-                        var frameBytes = data.GetRange(start, frameLen).ToArray();
-                        RenderHttpFrameToHud(frameBytes);
-                    }
-
-                    data.RemoveRange(0, end + 2);
-                }
-
-                if (data.Count > 1024 * 1024)
-                    data.RemoveRange(0, data.Count - 256 * 1024);
-            }
-        }
-
-        private static int FindMarker(List<byte> data, byte first, byte second, int startIndex)
-        {
-            for (int i = startIndex; i < data.Count - 1; i++)
-            {
-                if (data[i] == first && data[i + 1] == second)
-                    return i;
-            }
-
-            return -1;
-        }
-
-        private static void RenderHttpFrameToHud(byte[] frameBytes)
-        {
-            try
-            {
-                using (var ms = new MemoryStream(frameBytes))
-                using (var img = Image.FromStream(ms))
-                {
-                    var bmp = new Bitmap(img);
-                    GCSViews.FlightData.instance?.cam_camimage(bmp);
                 }
             }
             catch
             {
-                // Ignore invalid frames and continue streaming.
+                // Fall back to the original URL.
             }
+
+            if (htmlPageWithoutDirectStream)
+                return null;
+
+            return inputUri.ToString();
+        }
+
+        private static string ExtractMjpegCandidateFromHtml(string html, Uri baseUri)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return null;
+
+            var regex = new Regex("(?:src|href)\\s*=\\s*[\"'](?<u>[^\"']+)[\"']",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            var matches = regex.Matches(html);
+
+            foreach (Match match in matches)
+            {
+                var raw = match.Groups["u"].Value?.Trim();
+                if (string.IsNullOrWhiteSpace(raw))
+                    continue;
+
+                var low = raw.ToLowerInvariant();
+                if (!(low.Contains("mjpeg") || low.Contains("mjpg") || low.EndsWith(".jpg") || low.EndsWith(".jpeg") ||
+                      low.Contains("stream") || low.Contains("live")))
+                    continue;
+
+                if (Uri.TryCreate(baseUri, raw, out var absolute))
+                    return absolute.ToString();
+            }
+
+            return null;
         }
 
         private void CmbOsdColor_SelectedIndexChanged(object sender, EventArgs e)
