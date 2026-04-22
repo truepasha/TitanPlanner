@@ -54,9 +54,14 @@ namespace MissionPlanner.GCSViews
         private static bool _hudWebViewHadSuccessfulCapture;
         private static bool _hudWebViewOfflineMessageShown;
         private static bool _hudWebViewStretchToHud;
+        private static int _hudWebViewSessionId;
         private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
-        public static void SetHudWebViewStretchToHud(bool enabled) => _hudWebViewStretchToHud = enabled;
+        public static void SetHudWebViewStretchToHud(bool enabled)
+        {
+            _hudWebViewStretchToHud = enabled;
+            ApplyHudWebViewFillMode();
+        }
 
         /// <summary>
         /// Starts the HUD GStreamer with the given pipeline, showing a loading indicator.
@@ -202,9 +207,12 @@ namespace MissionPlanner.GCSViews
             _hudWebViewConsecutiveCaptureErrors = 0;
             _hudWebViewHadSuccessfulCapture = false;
             _hudWebViewOfflineMessageShown = false;
+            _hudWebViewSessionId++;
+            var activeSessionId = _hudWebViewSessionId;
 
             _hudWebView.CoreWebView2.Navigate("about:blank");
             _hudWebView.CoreWebView2.Navigate(url);
+            ApplyHudWebViewFillMode();
 
             if (_hudWebViewCaptureTimer == null)
             {
@@ -222,13 +230,22 @@ namespace MissionPlanner.GCSViews
                     {
                         _hudWebViewCaptureBuffer.SetLength(0);
                         await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Jpeg, _hudWebViewCaptureBuffer);
+                        if (activeSessionId != _hudWebViewSessionId)
+                            return;
+
                         _hudWebViewCaptureBuffer.Position = 0;
                         using (var img = Image.FromStream(_hudWebViewCaptureBuffer))
                         {
-                            myhud.bgimage = BuildHudWebViewFrame(img);
+                            var nextFrame = BuildHudWebViewFrame(img);
+                            var oldFrame = myhud.bgimage;
+                            myhud.bgimage = nextFrame;
+                            oldFrame?.Dispose();
                         }
 
                         _hudWebViewConsecutiveCaptureErrors = 0;
+                        if (!_hudWebViewHadSuccessfulCapture)
+                            ApplyHudWebViewFillMode();
+
                         _hudWebViewHadSuccessfulCapture = true;
                     }
                     catch
@@ -271,6 +288,7 @@ namespace MissionPlanner.GCSViews
             _hudWebViewConsecutiveCaptureErrors = 0;
             _hudWebViewHadSuccessfulCapture = false;
             _hudWebViewOfflineMessageShown = false;
+            _hudWebViewSessionId++;
 
             if (_hudWebView != null)
             {
@@ -280,7 +298,10 @@ namespace MissionPlanner.GCSViews
                     _hudWebView.CoreWebView2.Navigate("about:blank");
                 }
             }
+            var existingFrame = myhud.bgimage;
             myhud.bgimage = null;
+            existingFrame?.Dispose();
+            myhud.Invalidate();
 
         }
 
@@ -312,6 +333,40 @@ namespace MissionPlanner.GCSViews
             _hudWebView.Bounds = myhud.Bounds;
             _hudWebView.SendToBack();
             myhud.BringToFront();
+        }
+
+        private static void ApplyHudWebViewFillMode()
+        {
+            if (_hudWebView?.CoreWebView2 == null)
+                return;
+
+            var objectFit = _hudWebViewStretchToHud ? "fill" : "contain";
+            var script =
+                "(function() {" +
+                "document.documentElement.style.margin='0';" +
+                "document.documentElement.style.width='100%';" +
+                "document.documentElement.style.height='100%';" +
+                "document.body.style.margin='0';" +
+                "document.body.style.width='100%';" +
+                "document.body.style.height='100%';" +
+                "document.body.style.overflow='hidden';" +
+                "var vids=document.querySelectorAll('video');" +
+                "for (var i=0;i<vids.length;i++){" +
+                $"vids[i].style.objectFit='{objectFit}';" +
+                "vids[i].style.width='100%';" +
+                "vids[i].style.height='100%';" +
+                "}" +
+                "return vids.length;" +
+                "})();";
+
+            try
+            {
+                _ = _hudWebView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            catch
+            {
+                // ignore script injection failures for third-party pages
+            }
         }
         public static myGMAP mymap;
         public static bool threadrun;

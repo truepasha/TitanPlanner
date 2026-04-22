@@ -30,6 +30,7 @@ namespace MissionPlanner.Controls
         private CheckBox chkHudShow;
         private CheckBox chkStreamFillHud;
         private bool startup = true;
+        private readonly object _videoDeviceLock = new object();
 
         public FlightPlannerVideoOptions()
         {
@@ -123,7 +124,7 @@ namespace MissionPlanner.Controls
             this.labelStreamUrl.Name = "labelStreamUrl";
             this.labelStreamUrl.Size = new System.Drawing.Size(78, 16);
             this.labelStreamUrl.TabIndex = 9;
-            this.labelStreamUrl.Text = "Stream URL";
+            this.labelStreamUrl.Text = "Video URL";
             // 
             // labelGStreamer
             // 
@@ -270,11 +271,11 @@ namespace MissionPlanner.Controls
             // 
             this.chkStreamFillHud.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.chkStreamFillHud.AutoSize = true;
-            this.chkStreamFillHud.Location = new System.Drawing.Point(640, 134);
+            this.chkStreamFillHud.Location = new System.Drawing.Point(540, 109);
             this.chkStreamFillHud.Name = "chkStreamFillHud";
-            this.chkStreamFillHud.Size = new System.Drawing.Size(95, 20);
+            this.chkStreamFillHud.Size = new System.Drawing.Size(97, 20);
             this.chkStreamFillHud.TabIndex = 13;
-            this.chkStreamFillHud.Text = "Fill HUD Y";
+            this.chkStreamFillHud.Text = "Fill vertically";
             this.chkStreamFillHud.UseVisualStyleBackColor = true;
             // 
             // FlightPlannerVideoOptions
@@ -373,14 +374,17 @@ namespace MissionPlanner.Controls
             var startX = stopX - gap - buttonWidth;
 
             var streamY = cmbOsdColor.Bottom + 14;
+            txtStreamUrl.Left = left;
             txtStreamUrl.Top = streamY;
             labelStreamUrl.Top = streamY + 3;
             btnStreamStart.Top = streamY;
             btnStreamStop.Top = streamY;
 
-            chkStreamFillHud.Top = txtStreamUrl.Bottom + 4;
+            chkStreamFillHud.Top = streamY + 2;
+            chkStreamFillHud.Left = Math.Max(left + 20, startX - chkStreamFillHud.Width - 8);
+            txtStreamUrl.Width = Math.Max(150, chkStreamFillHud.Left - gap - txtStreamUrl.Left);
 
-            var gstY = chkStreamFillHud.Bottom + 4;
+            var gstY = txtStreamUrl.Bottom + 16;
             txtGStreamerSource.Top = gstY;
             labelGStreamer.Top = gstY + 3;
             btnGStreamerStart.Top = gstY;
@@ -391,11 +395,6 @@ namespace MissionPlanner.Controls
             btnStreamStop.Left = stopX;
             btnGStreamerStart.Left = startX;
             btnGStreamerStop.Left = stopX;
-            chkStreamFillHud.Left = startX;
-
-            txtStreamUrl.Left = left;
-            txtStreamUrl.Width = Math.Max(150, startX - gap - txtStreamUrl.Left);
-
             txtGStreamerSource.Left = left;
             txtGStreamerSource.Width = Math.Max(150, startX - gap - txtGStreamerSource.Left);
         }
@@ -503,8 +502,11 @@ namespace MissionPlanner.Controls
             try
             {
                 StopAllHudSources();
-                MainV2.cam = new Capture(cmbVideoSources.SelectedIndex, bmp.Media);
-                MainV2.cam.Start();
+                lock (_videoDeviceLock)
+                {
+                    MainV2.cam = new Capture(cmbVideoSources.SelectedIndex, bmp.Media);
+                    MainV2.cam.Start();
+                }
 
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
                 MainV2.cam.camimage += GCSViews.FlightData.instance.cam_camimage;
@@ -644,10 +646,25 @@ namespace MissionPlanner.Controls
 
         private void StopVideoDeviceSource()
         {
-            if (MainV2.cam != null)
+            lock (_videoDeviceLock)
             {
-                MainV2.cam.Dispose();
-                MainV2.cam = null;
+                if (MainV2.cam != null)
+                {
+                    var previousCam = MainV2.cam;
+                    MainV2.cam = null;
+
+                    try
+                    {
+                        previousCam.camimage -= GCSViews.FlightData.instance.cam_camimage;
+                    }
+                    catch { }
+
+                    try
+                    {
+                        previousCam.Dispose();
+                    }
+                    catch { }
+                }
             }
 
             GCSViews.FlightData.myhud.bgimage = null;
@@ -667,7 +684,7 @@ namespace MissionPlanner.Controls
 
             cmbVideoSources.Enabled = idle || active == ActiveVideoSource.VideoDevice;
             cmbVideoResolutions.Enabled = idle || active == ActiveVideoSource.VideoDevice;
-            txtStreamUrl.Enabled = idle || active == ActiveVideoSource.StreamUrl;
+            txtStreamUrl.Enabled = idle;
             txtGStreamerSource.Enabled = idle || active == ActiveVideoSource.GStreamer;
             chkStreamFillHud.Enabled = idle || active == ActiveVideoSource.StreamUrl;
         }
