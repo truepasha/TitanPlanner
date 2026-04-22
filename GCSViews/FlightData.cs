@@ -50,7 +50,9 @@ namespace MissionPlanner.GCSViews
         private static WebView2 _hudWebView;
         private static System.Windows.Forms.Timer _hudWebViewCaptureTimer;
         private static bool _hudWebViewCaptureInProgress;
-        private static EventHandler<CoreWebView2NavigationCompletedEventArgs> _hudWebViewNavigationCompletedHandler;
+        private static int _hudWebViewConsecutiveCaptureErrors;
+        private static bool _hudWebViewHadSuccessfulCapture;
+        private static bool _hudWebViewOfflineMessageShown;
         private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
 
@@ -195,21 +197,9 @@ namespace MissionPlanner.GCSViews
                 _hudWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             }
 
-            if (_hudWebViewNavigationCompletedHandler == null)
-            {
-                _hudWebViewNavigationCompletedHandler = (sender, args) =>
-                {
-                    if (args.IsSuccess)
-                        return;
-
-                    StopHudWebViewOverlay();
-                    var statusCode = args.HttpStatusCode > 0 ? $" (HTTP {args.HttpStatusCode})" : string.Empty;
-                    CustomMessageBox.Show($"Unable to open stream URL{statusCode}. Please check that the source is online.", Strings.ERROR);
-                };
-            }
-
-            _hudWebView.CoreWebView2.NavigationCompleted -= _hudWebViewNavigationCompletedHandler;
-            _hudWebView.CoreWebView2.NavigationCompleted += _hudWebViewNavigationCompletedHandler;
+            _hudWebViewConsecutiveCaptureErrors = 0;
+            _hudWebViewHadSuccessfulCapture = false;
+            _hudWebViewOfflineMessageShown = false;
 
             _hudWebView.CoreWebView2.Navigate("about:blank");
             _hudWebView.CoreWebView2.Navigate(url);
@@ -235,10 +225,22 @@ namespace MissionPlanner.GCSViews
                         {
                             myhud.bgimage = new Bitmap(img);
                         }
+
+                        _hudWebViewConsecutiveCaptureErrors = 0;
+                        _hudWebViewHadSuccessfulCapture = true;
                     }
                     catch
                     {
-                        // ignore frame capture errors, keep timer alive
+                        _hudWebViewConsecutiveCaptureErrors++;
+
+                        if (!_hudWebViewHadSuccessfulCapture &&
+                            !_hudWebViewOfflineMessageShown &&
+                            _hudWebViewConsecutiveCaptureErrors >= 45)
+                        {
+                            _hudWebViewOfflineMessageShown = true;
+                            StopHudWebViewOverlay();
+                            CustomMessageBox.Show("Unable to open stream URL. Please check that the source is online.", Strings.ERROR);
+                        }
                     }
                     finally
                     {
@@ -264,12 +266,15 @@ namespace MissionPlanner.GCSViews
             if (_hudWebViewCaptureTimer != null)
                 _hudWebViewCaptureTimer.Stop();
 
+            _hudWebViewConsecutiveCaptureErrors = 0;
+            _hudWebViewHadSuccessfulCapture = false;
+            _hudWebViewOfflineMessageShown = false;
+
             if (_hudWebView != null)
             {
                 _hudWebView.Visible = false;
                 if (_hudWebView.CoreWebView2 != null)
                 {
-                    _hudWebView.CoreWebView2.NavigationCompleted -= _hudWebViewNavigationCompletedHandler;
                     _hudWebView.CoreWebView2.Navigate("about:blank");
                 }
             }
