@@ -40,6 +40,7 @@ namespace MissionPlanner.Controls
         private bool _webCaptureBusy;
         private WebView2 _webStreamView;
         private Timer _webCaptureTimer;
+        private bool _webPlaybackScriptInstalled;
 
         public FlightPlannerVideoOptions()
         {
@@ -773,14 +774,15 @@ namespace MissionPlanner.Controls
                 _webStreamView = new WebView2
                 {
                     Name = "hiddenWebStreamView",
-                    Visible = false,
-                    Width = 1280,
-                    Height = 720,
-                    Location = new Point(-4000, -4000),
+                    Visible = true,
+                    Width = 1,
+                    Height = 1,
+                    Location = new Point(0, 0),
                     TabStop = false
                 };
 
                 Controls.Add(_webStreamView);
+                _webStreamView.SendToBack();
             }
 
             if (_webStreamView.CoreWebView2 == null)
@@ -789,12 +791,62 @@ namespace MissionPlanner.Controls
                 _webStreamView.CoreWebView2.Settings.IsStatusBarEnabled = false;
                 _webStreamView.CoreWebView2.Settings.AreDevToolsEnabled = false;
                 _webStreamView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+                _webStreamView.NavigationCompleted += async (s, e) =>
+                {
+                    if (e.IsSuccess)
+                        await ForceWebPlaybackAsync();
+                };
+            }
+
+            if (!_webPlaybackScriptInstalled && _webStreamView.CoreWebView2 != null)
+            {
+                _webPlaybackScriptInstalled = true;
+                await _webStreamView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+                    @"(() => {
+                        const start = () => {
+                            const vids = document.querySelectorAll('video');
+                            vids.forEach(v => {
+                                v.muted = true;
+                                v.autoplay = true;
+                                v.playsInline = true;
+                                const p = v.play();
+                                if (p && p.catch) p.catch(() => {});
+                            });
+                        };
+                        start();
+                        setInterval(start, 500);
+                    })();");
             }
 
             if (_webCaptureTimer == null)
             {
-                _webCaptureTimer = new Timer { Interval = 100 };
+                _webCaptureTimer = new Timer { Interval = 66 };
                 _webCaptureTimer.Tick += async (s, e) => await CaptureWebViewFrameToHudAsync();
+            }
+        }
+
+        private async System.Threading.Tasks.Task ForceWebPlaybackAsync()
+        {
+            try
+            {
+                if (_webStreamView?.CoreWebView2 == null)
+                    return;
+
+                await _webStreamView.CoreWebView2.ExecuteScriptAsync(
+                    @"(() => {
+                        const vids = document.querySelectorAll('video');
+                        vids.forEach(v => {
+                            v.muted = true;
+                            v.autoplay = true;
+                            v.playsInline = true;
+                            const p = v.play();
+                            if (p && p.catch) p.catch(() => {});
+                        });
+                    })();");
+            }
+            catch
+            {
+                // Ignore script execution failures for non-standard player pages.
             }
         }
 
