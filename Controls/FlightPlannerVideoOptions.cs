@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DirectShowLib;
@@ -17,7 +15,6 @@ namespace MissionPlanner.Controls
         private Label labelVideoFormat;
         private Label labelOsdColor;
         private Label labelStreamUrl;
-        private Label labelCodecValue;
         private Label labelGStreamer;
         private ComboBox cmbVideoSources;
         private ComboBox cmbVideoResolutions;
@@ -75,7 +72,6 @@ namespace MissionPlanner.Controls
             this.labelVideoFormat = new System.Windows.Forms.Label();
             this.labelOsdColor = new System.Windows.Forms.Label();
             this.labelStreamUrl = new System.Windows.Forms.Label();
-            this.labelCodecValue = new System.Windows.Forms.Label();
             this.labelGStreamer = new System.Windows.Forms.Label();
             this.cmbVideoSources = new System.Windows.Forms.ComboBox();
             this.cmbVideoResolutions = new System.Windows.Forms.ComboBox();
@@ -126,17 +122,6 @@ namespace MissionPlanner.Controls
             this.labelStreamUrl.Size = new System.Drawing.Size(78, 16);
             this.labelStreamUrl.TabIndex = 9;
             this.labelStreamUrl.Text = "Stream URL";
-            // 
-            // labelCodecValue
-            // 
-            this.labelCodecValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.labelCodecValue.AutoEllipsis = true;
-            this.labelCodecValue.Location = new System.Drawing.Point(520, 110);
-            this.labelCodecValue.Name = "labelCodecValue";
-            this.labelCodecValue.Size = new System.Drawing.Size(114, 18);
-            this.labelCodecValue.TabIndex = 13;
-            this.labelCodecValue.Text = "Codec: -";
-            this.labelCodecValue.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // labelGStreamer
             // 
@@ -291,7 +276,6 @@ namespace MissionPlanner.Controls
             this.Controls.Add(this.labelOsdColor);
             this.Controls.Add(this.cmbOsdColor);
             this.Controls.Add(this.labelStreamUrl);
-            this.Controls.Add(this.labelCodecValue);
             this.Controls.Add(this.txtStreamUrl);
             this.Controls.Add(this.btnStreamStart);
             this.Controls.Add(this.btnStreamStop);
@@ -337,7 +321,6 @@ namespace MissionPlanner.Controls
                 ? Settings.Instance["gstreamer_url"]
                 : @"videotestsrc ! video/x-raw, width=1280, height=720, framerate=30/1 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink";
             txtStreamUrl.Text = Settings.Instance["video_stream_url"] ?? string.Empty;
-            labelCodecValue.Text = "Codec: -";
 
             // Setup video start/stop button states
             if (MainV2.cam != null)
@@ -398,7 +381,6 @@ namespace MissionPlanner.Controls
             labelStreamUrl.Top = streamY + 3;
             btnStreamStart.Top = streamY;
             btnStreamStop.Top = streamY;
-            labelCodecValue.Top = streamY + 3;
 
             var gstY = txtStreamUrl.Bottom + 16;
             txtGStreamerSource.Top = gstY;
@@ -412,19 +394,8 @@ namespace MissionPlanner.Controls
             btnGStreamerStart.Left = startX;
             btnGStreamerStop.Left = stopX;
 
-            var codecWidth = 110;
-            var codecX = startX - gap - codecWidth;
-            if (codecX < left + 150)
-            {
-                codecWidth = Math.Max(70, startX - gap - (left + 150));
-                codecX = startX - gap - codecWidth;
-            }
-
-            labelCodecValue.Left = codecX;
-            labelCodecValue.Width = Math.Max(70, codecWidth);
-
             txtStreamUrl.Left = left;
-            txtStreamUrl.Width = Math.Max(150, codecX - gap - txtStreamUrl.Left);
+            txtStreamUrl.Width = Math.Max(150, startX - gap - txtStreamUrl.Left);
 
             txtGStreamerSource.Left = left;
             txtGStreamerSource.Width = Math.Max(150, startX - gap - txtGStreamerSource.Left);
@@ -611,7 +582,6 @@ namespace MissionPlanner.Controls
                 GCSViews.FlightData.StopHudWebViewOverlay();
 
                 GCSViews.FlightData.StartHudGStreamer(url);
-                labelCodecValue.Text = "Codec: " + DetectCodec(url);
             }
             catch (Exception ex)
             {
@@ -626,7 +596,6 @@ namespace MissionPlanner.Controls
             GCSViews.FlightData.StopHudWebViewOverlay();
             btnGStreamerStart.Enabled = true;
             btnStreamStart.Enabled = true;
-            labelCodecValue.Text = "Codec: -";
         }
 
         private void TxtStreamUrl_Leave(object sender, EventArgs e)
@@ -655,138 +624,31 @@ namespace MissionPlanner.Controls
             }
 
             if (parsedUri.Scheme != Uri.UriSchemeHttp &&
-                parsedUri.Scheme != Uri.UriSchemeHttps &&
-                parsedUri.Scheme != "rtsp")
+                parsedUri.Scheme != Uri.UriSchemeHttps)
             {
                 btnStreamStart.Enabled = true;
-                CustomMessageBox.Show("Supported URL schemes: http, https, rtsp", Strings.ERROR);
+                CustomMessageBox.Show("Stream URL supports only web streams: http, https", Strings.ERROR);
                 return;
             }
 
             Settings.Instance["video_stream_url"] = streamUrl;
 
-            // Browser-render mode for http(s): render WebView2 frames into HUD background
-            if (parsedUri.Scheme == Uri.UriSchemeHttp || parsedUri.Scheme == Uri.UriSchemeHttps)
-            {
-                try
-                {
-                    GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
-                    GCSViews.FlightData.StopHudGStreamer();
-                    GCSViews.FlightData.StartHudWebViewOverlay(streamUrl);
-                    labelCodecValue.Text = "Codec: Browser/WebRTC";
-                }
-
-                catch (Exception ex)
-                {
-                    btnStreamStart.Enabled = true;
-                    CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
-                }
-
-                return;
-            }
-
-            var pipeline = BuildPipelineFromUrl(parsedUri);
-            txtGStreamerSource.Text = pipeline;
-            Settings.Instance["gstreamer_url"] = pipeline;
-
-            GStreamer.GstLaunch = GStreamer.LookForGstreamer();
-            if (!GStreamer.GstLaunchExists)
-            {
-                GStreamerUI.DownloadGStreamer();
-
-                if (!GStreamer.GstLaunchExists)
-                {
-                    btnStreamStart.Enabled = true;
-                    return;
-                }
-            }
-
             try
             {
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
-                GCSViews.FlightData.StopHudWebViewOverlay();
-                GCSViews.FlightData.StartHudGStreamer(pipeline);
-                labelCodecValue.Text = "Codec: " + DetectCodec(streamUrl);
+                GCSViews.FlightData.StopHudGStreamer();
+                GCSViews.FlightData.StartHudWebViewOverlay(streamUrl);
             }
             catch (Exception ex)
             {
-                btnStreamStart.Enabled = true;
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
             }
         }
 
         private void BtnStreamStop_Click(object sender, EventArgs e)
         {
-            BtnGStreamerStop_Click(sender, e);
-        }
-
-        private static string BuildPipelineFromUrl(Uri streamUri)
-        {
-            var location = streamUri.AbsoluteUri.Replace("\\", "\\\\").Replace("\"", "\\\"");
-            if (streamUri.Scheme == "rtsp")
-            {
-                return $"rtspsrc location=\"{location}\" latency=1 udp-reconnect=1 timeout=0 do-retransmission=false ! application/x-rtp ! decodebin ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
-            }
-
-            return $"uridecodebin uri=\"{location}\" ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
-        }
-
-        private static string DetectCodec(string source)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(GStreamer.GstLaunch))
-                    return DetectCodecHeuristic(source);
-
-                var gstBinPath = Path.GetDirectoryName(GStreamer.GstLaunch);
-                if (string.IsNullOrEmpty(gstBinPath))
-                    return DetectCodecHeuristic(source);
-
-                var discoverer = Path.Combine(gstBinPath, "gst-discoverer-1.0.exe");
-                if (!File.Exists(discoverer))
-                    return DetectCodecHeuristic(source);
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = discoverer,
-                    Arguments = $"\"{source}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using (var process = Process.Start(psi))
-                {
-                    if (process == null)
-                        return DetectCodecHeuristic(source);
-
-                    if (!process.WaitForExit(2500))
-                    {
-                        try { process.Kill(); } catch { }
-                        return DetectCodecHeuristic(source);
-                    }
-
-                    var output = (process.StandardOutput.ReadToEnd() + "\n" + process.StandardError.ReadToEnd()).Trim();
-                    var match = System.Text.RegularExpressions.Regex.Match(output, @"Codec:\s*(.+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    if (match.Success)
-                        return match.Groups[1].Value.Trim();
-                }
-            }
-            catch { }
-
-            return DetectCodecHeuristic(source);
-        }
-
-        private static string DetectCodecHeuristic(string source)
-        {
-            var lower = (source ?? "").ToLowerInvariant();
-            if (lower.Contains("h265") || lower.Contains("hevc")) return "H.265/HEVC";
-            if (lower.Contains("h264") || lower.Contains("avc")) return "H.264/AVC";
-            if (lower.Contains("vp9")) return "VP9";
-            if (lower.Contains("av1")) return "AV1";
-            if (lower.Contains("mjpeg") || lower.Contains("jpeg")) return "MJPEG";
-            return "Unknown";
+            GCSViews.FlightData.StopHudWebViewOverlay();
+            btnStreamStart.Enabled = true;
         }
 
         private void CmbOsdColor_SelectedIndexChanged(object sender, EventArgs e)

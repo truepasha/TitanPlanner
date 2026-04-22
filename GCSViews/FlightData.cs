@@ -50,6 +50,7 @@ namespace MissionPlanner.GCSViews
         private static WebView2 _hudWebView;
         private static System.Windows.Forms.Timer _hudWebViewCaptureTimer;
         private static bool _hudWebViewCaptureInProgress;
+        private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
 
         /// <summary>
@@ -201,7 +202,7 @@ namespace MissionPlanner.GCSViews
             {
                 _hudWebViewCaptureTimer = new System.Windows.Forms.Timer
                 {
-                    Interval = 60
+                    Interval = 20
                 };
                 _hudWebViewCaptureTimer.Tick += async (s, e) =>
                 {
@@ -211,14 +212,12 @@ namespace MissionPlanner.GCSViews
                     _hudWebViewCaptureInProgress = true;
                     try
                     {
-                        using (var ms = new MemoryStream())
+                        _hudWebViewCaptureBuffer.SetLength(0);
+                        await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Jpeg, _hudWebViewCaptureBuffer);
+                        _hudWebViewCaptureBuffer.Position = 0;
+                        using (var img = Image.FromStream(_hudWebViewCaptureBuffer))
                         {
-                            await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
-                            ms.Position = 0;
-                            using (var img = Image.FromStream(ms))
-                            {
-                                myhud.bgimage = new Bitmap(img);
-                            }
+                            myhud.bgimage = new Bitmap(img);
                         }
                     }
                     catch
