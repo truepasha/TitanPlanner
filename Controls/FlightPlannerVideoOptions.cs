@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DirectShowLib;
-using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
 using MissionPlanner.Utilities;
 using WebCamService;
 
@@ -30,10 +32,9 @@ namespace MissionPlanner.Controls
         private MyButton btnVideoStart;
         private MyButton btnVideoStop;
         private CheckBox chkHudShow;
-        private Panel pnlWebStreamHost;
-        private WebView2 webStreamView;
         private bool startup = true;
-        private bool webViewInitialized;
+        private CancellationTokenSource _httpStreamCts;
+        private Task _httpStreamTask;
 
         public FlightPlannerVideoOptions()
         {
@@ -82,7 +83,6 @@ namespace MissionPlanner.Controls
             this.btnVideoStart = new MissionPlanner.Controls.MyButton();
             this.btnVideoStop = new MissionPlanner.Controls.MyButton();
             this.chkHudShow = new System.Windows.Forms.CheckBox();
-            this.pnlWebStreamHost = new System.Windows.Forms.Panel();
             this.SuspendLayout();
             // 
             // labelVideoDevice
@@ -227,17 +227,6 @@ namespace MissionPlanner.Controls
             this.btnWebStreamStop.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.btnWebStreamStop.UseVisualStyleBackColor = true;
             // 
-            // pnlWebStreamHost
-            // 
-            this.pnlWebStreamHost.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pnlWebStreamHost.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlWebStreamHost.Location = new System.Drawing.Point(10, 220);
-            this.pnlWebStreamHost.Name = "pnlWebStreamHost";
-            this.pnlWebStreamHost.Size = new System.Drawing.Size(739, 200);
-            this.pnlWebStreamHost.TabIndex = 17;
-            // 
             // btnVideoStart
             // 
             this.btnVideoStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -292,7 +281,6 @@ namespace MissionPlanner.Controls
             this.Controls.Add(this.txtWebStreamUrl);
             this.Controls.Add(this.btnWebStreamStart);
             this.Controls.Add(this.btnWebStreamStop);
-            this.Controls.Add(this.pnlWebStreamHost);
             this.Name = "FlightPlannerVideoOptions";
             this.Size = new System.Drawing.Size(760, 430);
             this.ResumeLayout(false);
@@ -304,6 +292,58 @@ namespace MissionPlanner.Controls
         {
             base.OnLoad(e);
             Activate();
+            LayoutActionControls();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            LayoutActionControls();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                StopHttpHudStream();
+
+            base.Dispose(disposing);
+        }
+
+        private void LayoutActionControls()
+        {
+            const int left = 120;
+            const int marginRight = 10;
+            const int btnWidth = 50;
+            const int spacing = 9;
+            const int minTextboxWidth = 120;
+
+            var stopX = this.ClientSize.Width - marginRight - btnWidth;
+            var startX = stopX - spacing - btnWidth;
+            var textWidth = Math.Max(minTextboxWidth, startX - spacing - left);
+
+            if (textWidth <= minTextboxWidth)
+                return;
+
+            txtGStreamerSource.Left = left;
+            txtGStreamerSource.Width = textWidth;
+            btnGStreamerStart.Left = startX;
+            btnGStreamerStop.Left = stopX;
+
+            txtWebStreamUrl.Left = left;
+            txtWebStreamUrl.Width = textWidth;
+            btnWebStreamStart.Left = startX;
+            btnWebStreamStop.Left = stopX;
+
+            cmbVideoSources.Left = left;
+            cmbVideoSources.Width = textWidth;
+            cmbVideoResolutions.Left = left;
+            cmbVideoResolutions.Width = textWidth;
+            cmbOsdColor.Left = left;
+            cmbOsdColor.Width = textWidth + btnWidth + spacing + btnWidth + spacing;
+
+            btnVideoStart.Left = startX;
+            btnVideoStop.Left = stopX;
+            chkHudShow.Left = startX;
         }
 
         public void Activate()
@@ -473,6 +513,7 @@ namespace MissionPlanner.Controls
 
             // Stop first
             BtnVideoStop_Click(sender, e);
+            StopHttpHudStream();
 
             var bmp = cmbVideoResolutions.SelectedItem as GCSBitmapInfo;
             if (bmp == null)
@@ -521,6 +562,7 @@ namespace MissionPlanner.Controls
 
         private void BtnGStreamerStart_Click(object sender, EventArgs e)
         {
+            StopHttpHudStream();
             // Disable immediately to prevent spam clicking
             btnGStreamerStart.Enabled = false;
 
@@ -566,7 +608,7 @@ namespace MissionPlanner.Controls
             btnGStreamerStart.Enabled = true;
         }
 
-        private async void BtnWebStreamStart_Click(object sender, EventArgs e)
+        private void BtnWebStreamStart_Click(object sender, EventArgs e)
         {
             var url = txtWebStreamUrl.Text?.Trim();
             if (string.IsNullOrWhiteSpace(url))
@@ -586,8 +628,11 @@ namespace MissionPlanner.Controls
             {
                 btnWebStreamStart.Enabled = false;
                 Settings.Instance["web_stream_url"] = uri.ToString();
-                await EnsureWebViewInitializedAsync();
-                webStreamView.Source = uri;
+
+                // Apply HUD overlay setting so telemetry remains over the video background.
+                GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                StopHudVideoInputsForHttp();
+                StartHttpHudStream(uri);
             }
             catch (Exception ex)
             {
@@ -598,49 +643,143 @@ namespace MissionPlanner.Controls
 
         private void BtnWebStreamStop_Click(object sender, EventArgs e)
         {
-            if (webStreamView?.CoreWebView2 != null)
-            {
-                webStreamView.CoreWebView2.Stop();
-                webStreamView.Source = new Uri("about:blank");
-            }
-
-            btnWebStreamStart.Enabled = true;
+            StopHttpHudStream();
+            GCSViews.FlightData.myhud.bgimage = null;
         }
 
-        private async System.Threading.Tasks.Task EnsureWebViewInitializedAsync()
+        private void StopHudVideoInputsForHttp()
         {
-            if (webStreamView == null)
+            // Stop other HUD video inputs to avoid racing background updates.
+            GCSViews.FlightData.StopHudGStreamer();
+            if (MainV2.cam != null)
             {
-                webStreamView = new WebView2
+                MainV2.cam.Dispose();
+                MainV2.cam = null;
+                btnVideoStart.Enabled = true;
+            }
+        }
+
+        private void StartHttpHudStream(Uri uri)
+        {
+            StopHttpHudStream();
+
+            _httpStreamCts = new CancellationTokenSource();
+            _httpStreamTask = Task.Run(() => HttpHudStreamLoop(uri, _httpStreamCts.Token), _httpStreamCts.Token);
+            btnWebStreamStart.Enabled = false;
+        }
+
+        private void StopHttpHudStream()
+        {
+            try
+            {
+                _httpStreamCts?.Cancel();
+                _httpStreamTask?.Wait(300);
+            }
+            catch { }
+            finally
+            {
+                _httpStreamTask = null;
+                _httpStreamCts?.Dispose();
+                _httpStreamCts = null;
+                btnWebStreamStart.Enabled = true;
+            }
+        }
+
+        private void HttpHudStreamLoop(Uri uri, CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
                 {
-                    Dock = DockStyle.Fill,
-                    Name = "webStreamView"
-                };
+                    var request = (HttpWebRequest)WebRequest.Create(uri);
+                    request.Method = "GET";
+                    request.KeepAlive = true;
+                    request.Timeout = 10000;
+                    request.ReadWriteTimeout = 10000;
+                    request.UserAgent = "MissionPlanner-HUD-HTTP";
 
-                pnlWebStreamHost.Controls.Add(webStreamView);
-            }
+                    using (var response = (HttpWebResponse)request.GetResponse())
+                    using (var stream = response.GetResponseStream())
+                    {
+                        if (stream == null)
+                            throw new InvalidOperationException("Empty HTTP stream.");
 
-            if (!webViewInitialized)
-            {
-                await webStreamView.EnsureCoreWebView2Async(null);
-                webStreamView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-                webStreamView.CoreWebView2.Settings.AreDevToolsEnabled = false;
-                webStreamView.CoreWebView2.Settings.IsZoomControlEnabled = true;
-                webStreamView.CoreWebView2.Settings.IsScriptEnabled = true;
-                await webStreamView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
-                    "document.addEventListener('contextmenu', e => e.preventDefault());");
-
-                webStreamView.NavigationCompleted += WebStreamView_NavigationCompleted;
-                webViewInitialized = true;
+                        ReadJpegFramesFromStream(stream, token);
+                    }
+                }
+                catch
+                {
+                    if (token.IsCancellationRequested)
+                        return;
+                    Thread.Sleep(1000);
+                }
             }
         }
 
-        private void WebStreamView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        private void ReadJpegFramesFromStream(Stream stream, CancellationToken token)
         {
-            btnWebStreamStart.Enabled = true;
-            if (!e.IsSuccess)
+            var readBuffer = new byte[16 * 1024];
+            var data = new List<byte>(512 * 1024);
+
+            while (!token.IsCancellationRequested)
             {
-                CustomMessageBox.Show("Web stream navigation failed. Check the URL and stream availability.");
+                var bytesRead = stream.Read(readBuffer, 0, readBuffer.Length);
+                if (bytesRead <= 0)
+                    break;
+
+                for (int i = 0; i < bytesRead; i++)
+                    data.Add(readBuffer[i]);
+
+                while (true)
+                {
+                    int start = FindMarker(data, 0xFF, 0xD8, 0);
+                    if (start < 0)
+                        break;
+
+                    int end = FindMarker(data, 0xFF, 0xD9, start + 2);
+                    if (end < 0)
+                        break;
+
+                    int frameLen = end - start + 2;
+                    if (frameLen > 2)
+                    {
+                        var frameBytes = data.GetRange(start, frameLen).ToArray();
+                        RenderHttpFrameToHud(frameBytes);
+                    }
+
+                    data.RemoveRange(0, end + 2);
+                }
+
+                if (data.Count > 1024 * 1024)
+                    data.RemoveRange(0, data.Count - 256 * 1024);
+            }
+        }
+
+        private static int FindMarker(List<byte> data, byte first, byte second, int startIndex)
+        {
+            for (int i = startIndex; i < data.Count - 1; i++)
+            {
+                if (data[i] == first && data[i + 1] == second)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private static void RenderHttpFrameToHud(byte[] frameBytes)
+        {
+            try
+            {
+                using (var ms = new MemoryStream(frameBytes))
+                using (var img = Image.FromStream(ms))
+                {
+                    var bmp = new Bitmap(img);
+                    GCSViews.FlightData.instance?.cam_camimage(bmp);
+                }
+            }
+            catch
+            {
+                // Ignore invalid frames and continue streaming.
             }
         }
 
