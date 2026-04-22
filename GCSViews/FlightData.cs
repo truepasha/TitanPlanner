@@ -50,8 +50,18 @@ namespace MissionPlanner.GCSViews
         private static WebView2 _hudWebView;
         private static System.Windows.Forms.Timer _hudWebViewCaptureTimer;
         private static bool _hudWebViewCaptureInProgress;
+        private static int _hudWebViewConsecutiveCaptureErrors;
+        private static bool _hudWebViewHadSuccessfulCapture;
+        private static bool _hudWebViewOfflineMessageShown;
+        private static bool _hudWebViewStretchToHud;
+        private static int _hudWebViewSessionId;
         private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
+        public static void SetHudWebViewStretchToHud(bool enabled)
+        {
+            _hudWebViewStretchToHud = enabled;
+            ApplyHudWebViewFillMode();
+        }
 
         /// <summary>
         /// Starts the HUD GStreamer with the given pipeline, showing a loading indicator.
@@ -181,11 +191,9 @@ namespace MissionPlanner.GCSViews
                 {
                     Dock = DockStyle.Fill
                 };
-                myhud.Parent.Controls.Add(_hudWebView);
-                _hudWebView.SendToBack();
-                myhud.BringToFront();
             }
 
+            EnsureHudWebViewParent();
             _hudWebView.Visible = true;
 
             if (_hudWebView.CoreWebView2 == null)
@@ -196,13 +204,20 @@ namespace MissionPlanner.GCSViews
                 _hudWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             }
 
-            _hudWebView.Source = new Uri(url);
+            _hudWebViewConsecutiveCaptureErrors = 0;
+            _hudWebViewHadSuccessfulCapture = false;
+            _hudWebViewOfflineMessageShown = false;
+            _hudWebViewSessionId++;
+
+            _hudWebView.CoreWebView2.Navigate("about:blank");
+            _hudWebView.CoreWebView2.Navigate(url);
+            ApplyHudWebViewFillMode();
 
             if (_hudWebViewCaptureTimer == null)
             {
                 _hudWebViewCaptureTimer = new System.Windows.Forms.Timer
                 {
-                    Interval = 20
+                    Interval = 8
                 };
                 _hudWebViewCaptureTimer.Tick += async (s, e) =>
                 {
@@ -213,16 +228,38 @@ namespace MissionPlanner.GCSViews
                     try
                     {
                         _hudWebViewCaptureBuffer.SetLength(0);
+                        var captureSessionId = _hudWebViewSessionId;
                         await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Jpeg, _hudWebViewCaptureBuffer);
+                        if (captureSessionId != _hudWebViewSessionId)
+                            return;
+
                         _hudWebViewCaptureBuffer.Position = 0;
                         using (var img = Image.FromStream(_hudWebViewCaptureBuffer))
                         {
-                            myhud.bgimage = new Bitmap(img);
+                            var nextFrame = BuildHudWebViewFrame(img);
+                            var oldFrame = myhud.bgimage;
+                            myhud.bgimage = nextFrame;
+                            oldFrame?.Dispose();
                         }
+
+                        _hudWebViewConsecutiveCaptureErrors = 0;
+                        if (!_hudWebViewHadSuccessfulCapture)
+                            ApplyHudWebViewFillMode();
+
+                        _hudWebViewHadSuccessfulCapture = true;
                     }
                     catch
                     {
-                        // ignore frame capture errors, keep timer alive
+                        _hudWebViewConsecutiveCaptureErrors++;
+
+                        if (!_hudWebViewHadSuccessfulCapture &&
+                            !_hudWebViewOfflineMessageShown &&
+                            _hudWebViewConsecutiveCaptureErrors >= 45)
+                        {
+                            _hudWebViewOfflineMessageShown = true;
+                            StopHudWebViewOverlay();
+                            CustomMessageBox.Show("Unable to open stream URL. Please check that the source is online.", Strings.ERROR);
+                        }
                     }
                     finally
                     {
@@ -248,8 +285,94 @@ namespace MissionPlanner.GCSViews
             if (_hudWebViewCaptureTimer != null)
                 _hudWebViewCaptureTimer.Stop();
 
+            _hudWebViewConsecutiveCaptureErrors = 0;
+            _hudWebViewHadSuccessfulCapture = false;
+            _hudWebViewOfflineMessageShown = false;
+            _hudWebViewSessionId++;
+
             if (_hudWebView != null)
+            {
                 _hudWebView.Visible = false;
+                if (_hudWebView.CoreWebView2 != null)
+                {
+                    _hudWebView.CoreWebView2.Navigate("about:blank");
+                }
+            }
+            var existingFrame = myhud.bgimage;
+            myhud.bgimage = null;
+            existingFrame?.Dispose();
+            myhud.Invalidate();
+
+        }
+
+        private static Bitmap BuildHudWebViewFrame(Image image)
+        {
+            if (!_hudWebViewStretchToHud || myhud == null || myhud.Width <= 0 || myhud.Height <= 0)
+                return new Bitmap(image);
+
+            var stretchedFrame = new Bitmap(myhud.Width, myhud.Height);
+            using (var graphics = Graphics.FromImage(stretchedFrame))
+            {
+                var scale = Math.Max((float)stretchedFrame.Width / image.Width, (float)stretchedFrame.Height / image.Height);
+                var drawWidth = (int)(image.Width * scale);
+                var drawHeight = (int)(image.Height * scale);
+                var drawX = (stretchedFrame.Width - drawWidth) / 2;
+                var drawY = (stretchedFrame.Height - drawHeight) / 2;
+
+                graphics.DrawImage(image, drawX, drawY, drawWidth, drawHeight);
+            }
+
+            return stretchedFrame;
+        }
+
+        private static void EnsureHudWebViewParent()
+        {
+            if (_hudWebView == null || myhud?.Parent == null)
+                return;
+
+            if (_hudWebView.Parent != myhud.Parent)
+            {
+                _hudWebView.Parent?.Controls.Remove(_hudWebView);
+                myhud.Parent.Controls.Add(_hudWebView);
+            }
+
+            _hudWebView.Bounds = myhud.Bounds;
+            _hudWebView.SendToBack();
+            myhud.BringToFront();
+        }
+
+        private static void ApplyHudWebViewFillMode()
+        {
+            if (_hudWebView?.CoreWebView2 == null)
+                return;
+
+            var objectFit = _hudWebViewStretchToHud ? "cover" : "contain";
+            var script =
+                "(function() {" +
+                "document.documentElement.style.margin='0';" +
+                "document.documentElement.style.width='100%';" +
+                "document.documentElement.style.height='100%';" +
+                "document.body.style.margin='0';" +
+                "document.body.style.width='100%';" +
+                "document.body.style.height='100%';" +
+                "document.body.style.overflow='hidden';" +
+                "var vids=document.querySelectorAll('video');" +
+                "for (var i=0;i<vids.length;i++){" +
+                $"vids[i].style.objectFit='{objectFit}';" +
+                "vids[i].style.width='100%';" +
+                "vids[i].style.height='100%';" +
+                "}" +
+                "return vids.length;" +
+                "})();";
+
+            try
+            {
+                _ = _hudWebView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            catch
+            {
+                // ignore script injection failures for third-party pages
+            }
         }
         public static myGMAP mymap;
         public static bool threadrun;
@@ -3543,6 +3666,7 @@ namespace MissionPlanner.GCSViews
             (sender as Form).SaveStartupLocation();
             //GetFormFromGuid(GetOrCreateGuid("fd_hud_guid")).Controls.Add(hud1);
             ((sender as Form).Tag as Control).Controls.Add(hud1);
+            EnsureHudWebViewParent();
             //SubMainLeft.Panel1.Controls.Add(hud1);
             if (hud1.Parent == SubMainLeft.Panel1)
                 SubMainLeft.Panel1Collapsed = false;
@@ -4245,6 +4369,7 @@ namespace MissionPlanner.GCSViews
             dropout.Tag = hud1.Parent;
             SubMainLeft.Panel1.Controls.Remove(hud1);
             dropout.Controls.Add(hud1);
+            EnsureHudWebViewParent();
             dropout.Resize += dropout_Resize;
             dropout.FormClosed += dropout_FormClosed;
             dropout.RestoreStartupLocation();
@@ -4265,6 +4390,7 @@ namespace MissionPlanner.GCSViews
         private void hud1_Resize(object sender, EventArgs e)
         {
             Console.WriteLine("HUD resize " + hud1.Width + " " + hud1.Height); // +"\n"+ System.Environment.StackTrace);
+            EnsureHudWebViewParent();
 
             if (hud1.Parent == this.SubMainLeft.Panel1)
             {
@@ -5744,6 +5870,7 @@ namespace MissionPlanner.GCSViews
             hud1.SixteenXNine = !hud1.SixteenXNine;
             Settings.Instance["HUD_SixteenXNine"] = hud1.SixteenXNine.ToString();
             hud1.doResize();
+            EnsureHudWebViewParent();
         }
 
         private void setEKFHomeHereToolStripMenuItem_Click(object sender, EventArgs e)
