@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
@@ -41,6 +42,12 @@ namespace MissionPlanner.Controls
         private WebView2 _webStreamView;
         private Timer _webCaptureTimer;
         private bool _webPlaybackScriptInstalled;
+        private Uri _webStreamUri;
+        private DateTime _lastWebFrameUtc = DateTime.MinValue;
+        private DateTime _lastWebHealthCheckUtc = DateTime.MinValue;
+        private double _lastVideoTimeSeconds = -1;
+        private int _webStallChecks;
+        private readonly Stopwatch _webRestartCooldown = Stopwatch.StartNew();
 
         public FlightPlannerVideoOptions()
         {
@@ -747,7 +754,12 @@ namespace MissionPlanner.Controls
         {
             await EnsureHiddenWebViewAsync();
 
+            _webStreamUri = uri;
             _webViewStreamRunning = true;
+            _lastWebFrameUtc = DateTime.MinValue;
+            _lastWebHealthCheckUtc = DateTime.MinValue;
+            _lastVideoTimeSeconds = -1;
+            _webStallChecks = 0;
             _webStreamView.Source = uri;
             _webCaptureTimer?.Start();
         }
@@ -756,6 +768,8 @@ namespace MissionPlanner.Controls
         {
             _webViewStreamRunning = false;
             _webCaptureBusy = false;
+            _webStallChecks = 0;
+            _lastVideoTimeSeconds = -1;
 
             _webCaptureTimer?.Stop();
 
@@ -775,8 +789,8 @@ namespace MissionPlanner.Controls
                 {
                     Name = "hiddenWebStreamView",
                     Visible = true,
-                    Width = 1,
-                    Height = 1,
+                    Width = 1280,
+                    Height = 720,
                     Location = new Point(0, 0),
                     TabStop = false
                 };
@@ -791,6 +805,8 @@ namespace MissionPlanner.Controls
                 _webStreamView.CoreWebView2.Settings.IsStatusBarEnabled = false;
                 _webStreamView.CoreWebView2.Settings.AreDevToolsEnabled = false;
                 _webStreamView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+                _webStreamView.CoreWebView2.Settings.IsPinchZoomEnabled = false;
+                _webStreamView.CoreWebView2.Settings.IsGeneralAutofillEnabled = false;
                 _webStreamView.NavigationCompleted += async (s, e) =>
                 {
                     if (e.IsSuccess)
@@ -813,14 +829,33 @@ namespace MissionPlanner.Controls
                                 if (p && p.catch) p.catch(() => {});
                             });
                         };
+                        const bindVideoHealth = () => {
+                            const vids = document.querySelectorAll('video');
+                            vids.forEach(v => {
+                                if (v.__mpBound) return;
+                                v.__mpBound = true;
+                                const tick = () => {
+                                    window.__mpVideoState = {
+                                        t: Number(v.currentTime || 0),
+                                        paused: !!v.paused,
+                                        ended: !!v.ended,
+                                        rs: Number(v.readyState || 0),
+                                        ts: Date.now()
+                                    };
+                                };
+                                ['playing', 'timeupdate', 'stalled', 'waiting', 'pause', 'loadeddata', 'canplay'].forEach(evt => v.addEventListener(evt, tick));
+                                tick();
+                            });
+                        };
                         start();
-                        setInterval(start, 500);
+                        bindVideoHealth();
+                        setInterval(() => { start(); bindVideoHealth(); }, 250);
                     })();");
             }
 
             if (_webCaptureTimer == null)
             {
-                _webCaptureTimer = new Timer { Interval = 66 };
+                _webCaptureTimer = new Timer { Interval = 8 };
                 _webCaptureTimer.Tick += async (s, e) => await CaptureWebViewFrameToHudAsync();
             }
         }
@@ -855,10 +890,18 @@ namespace MissionPlanner.Controls
             if (!_webViewStreamRunning || _webCaptureBusy || _webStreamView?.CoreWebView2 == null)
                 return;
 
+            if ((DateTime.UtcNow - _lastWebHealthCheckUtc).TotalMilliseconds > 750)
+            {
+                _lastWebHealthCheckUtc = DateTime.UtcNow;
+                await CheckAndRecoverWebPlaybackAsync();
+            }
+
             _webCaptureBusy = true;
 
             try
             {
+                SyncWebViewCaptureSize();
+
                 using (var ms = new MemoryStream())
                 {
                     await _webStreamView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
@@ -872,6 +915,7 @@ namespace MissionPlanner.Controls
                         var old = GCSViews.FlightData.myhud.bgimage;
                         GCSViews.FlightData.myhud.bgimage = bmp;
                         old?.Dispose();
+                        _lastWebFrameUtc = DateTime.UtcNow;
                     }
                 }
             }
@@ -883,6 +927,93 @@ namespace MissionPlanner.Controls
             {
                 _webCaptureBusy = false;
             }
+        }
+
+        private void SyncWebViewCaptureSize()
+        {
+            if (_webStreamView == null)
+                return;
+
+            var hud = GCSViews.FlightData.myhud;
+            var targetW = Math.Max(640, hud?.Width ?? 1280);
+            var targetH = Math.Max(360, hud?.Height ?? 720);
+
+            if (_webStreamView.Width != targetW || _webStreamView.Height != targetH)
+            {
+                _webStreamView.Width = targetW;
+                _webStreamView.Height = targetH;
+            }
+        }
+
+        private async System.Threading.Tasks.Task CheckAndRecoverWebPlaybackAsync()
+        {
+            try
+            {
+                if (_webStreamView?.CoreWebView2 == null)
+                    return;
+
+                var raw = await _webStreamView.CoreWebView2.ExecuteScriptAsync(
+                    @"(() => {
+                        const s = window.__mpVideoState || null;
+                        if (!s) return '';
+                        return `${s.paused ? 1 : 0}|${s.ended ? 1 : 0}|${s.rs}|${s.t}`;
+                    })();");
+
+                var state = UnwrapJsString(raw);
+                if (string.IsNullOrWhiteSpace(state))
+                {
+                    await ForceWebPlaybackAsync();
+                    return;
+                }
+
+                var parts = state.Split('|');
+                if (parts.Length != 4)
+                    return;
+
+                var paused = parts[0] == "1";
+                var ended = parts[1] == "1";
+                var readyState = int.TryParse(parts[2], out var rs) ? rs : 0;
+                var currentTime = double.TryParse(parts[3], out var t) ? t : 0;
+
+                var stalledByFrames = _lastWebFrameUtc != DateTime.MinValue &&
+                                      (DateTime.UtcNow - _lastWebFrameUtc).TotalMilliseconds > 1500;
+                var stalledByTime = _lastVideoTimeSeconds >= 0 && Math.Abs(currentTime - _lastVideoTimeSeconds) < 0.001;
+                var unhealthy = paused || ended || readyState < 2 || stalledByFrames || stalledByTime;
+
+                if (unhealthy)
+                {
+                    _webStallChecks++;
+                    await ForceWebPlaybackAsync();
+
+                    if (_webStallChecks >= 4 && _webRestartCooldown.ElapsedMilliseconds > 3000 && _webStreamUri != null)
+                    {
+                        _webRestartCooldown.Restart();
+                        _webStallChecks = 0;
+                        _webStreamView.Source = _webStreamUri;
+                    }
+                }
+                else
+                {
+                    _webStallChecks = 0;
+                }
+
+                _lastVideoTimeSeconds = currentTime;
+            }
+            catch
+            {
+                // No-op: transient script failures during navigation/recovery are expected.
+            }
+        }
+
+        private static string UnwrapJsString(string jsResult)
+        {
+            if (string.IsNullOrWhiteSpace(jsResult) || jsResult == "null")
+                return string.Empty;
+
+            if (jsResult.Length >= 2 && jsResult[0] == '"' && jsResult[jsResult.Length - 1] == '"')
+                return Regex.Unescape(jsResult.Substring(1, jsResult.Length - 2));
+
+            return jsResult;
         }
 
         private static string ExtractMjpegCandidateFromHtml(string html, Uri baseUri)
