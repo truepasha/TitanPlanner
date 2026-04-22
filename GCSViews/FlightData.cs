@@ -50,6 +50,7 @@ namespace MissionPlanner.GCSViews
         private static WebView2 _hudWebView;
         private static System.Windows.Forms.Timer _hudWebViewCaptureTimer;
         private static bool _hudWebViewCaptureInProgress;
+        private static EventHandler<CoreWebView2NavigationCompletedEventArgs> _hudWebViewNavigationCompletedHandler;
         private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
 
@@ -181,11 +182,9 @@ namespace MissionPlanner.GCSViews
                 {
                     Dock = DockStyle.Fill
                 };
-                myhud.Parent.Controls.Add(_hudWebView);
-                _hudWebView.SendToBack();
-                myhud.BringToFront();
             }
 
+            EnsureHudWebViewParent();
             _hudWebView.Visible = true;
 
             if (_hudWebView.CoreWebView2 == null)
@@ -196,13 +195,30 @@ namespace MissionPlanner.GCSViews
                 _hudWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             }
 
-            _hudWebView.Source = new Uri(url);
+            if (_hudWebViewNavigationCompletedHandler == null)
+            {
+                _hudWebViewNavigationCompletedHandler = (sender, args) =>
+                {
+                    if (args.IsSuccess)
+                        return;
+
+                    StopHudWebViewOverlay();
+                    var statusCode = args.HttpStatusCode > 0 ? $" (HTTP {args.HttpStatusCode})" : string.Empty;
+                    CustomMessageBox.Show($"Unable to open stream URL{statusCode}. Please check that the source is online.", Strings.ERROR);
+                };
+            }
+
+            _hudWebView.CoreWebView2.NavigationCompleted -= _hudWebViewNavigationCompletedHandler;
+            _hudWebView.CoreWebView2.NavigationCompleted += _hudWebViewNavigationCompletedHandler;
+
+            _hudWebView.CoreWebView2.Navigate("about:blank");
+            _hudWebView.CoreWebView2.Navigate(url);
 
             if (_hudWebViewCaptureTimer == null)
             {
                 _hudWebViewCaptureTimer = new System.Windows.Forms.Timer
                 {
-                    Interval = 20
+                    Interval = 8
                 };
                 _hudWebViewCaptureTimer.Tick += async (s, e) =>
                 {
@@ -249,7 +265,31 @@ namespace MissionPlanner.GCSViews
                 _hudWebViewCaptureTimer.Stop();
 
             if (_hudWebView != null)
+            {
                 _hudWebView.Visible = false;
+                if (_hudWebView.CoreWebView2 != null)
+                {
+                    _hudWebView.CoreWebView2.NavigationCompleted -= _hudWebViewNavigationCompletedHandler;
+                    _hudWebView.CoreWebView2.Navigate("about:blank");
+                }
+            }
+
+        }
+
+        private static void EnsureHudWebViewParent()
+        {
+            if (_hudWebView == null || myhud?.Parent == null)
+                return;
+
+            if (_hudWebView.Parent != myhud.Parent)
+            {
+                _hudWebView.Parent?.Controls.Remove(_hudWebView);
+                myhud.Parent.Controls.Add(_hudWebView);
+            }
+
+            _hudWebView.Bounds = myhud.Bounds;
+            _hudWebView.SendToBack();
+            myhud.BringToFront();
         }
         public static myGMAP mymap;
         public static bool threadrun;
@@ -3543,6 +3583,7 @@ namespace MissionPlanner.GCSViews
             (sender as Form).SaveStartupLocation();
             //GetFormFromGuid(GetOrCreateGuid("fd_hud_guid")).Controls.Add(hud1);
             ((sender as Form).Tag as Control).Controls.Add(hud1);
+            EnsureHudWebViewParent();
             //SubMainLeft.Panel1.Controls.Add(hud1);
             if (hud1.Parent == SubMainLeft.Panel1)
                 SubMainLeft.Panel1Collapsed = false;
@@ -4245,6 +4286,7 @@ namespace MissionPlanner.GCSViews
             dropout.Tag = hud1.Parent;
             SubMainLeft.Panel1.Controls.Remove(hud1);
             dropout.Controls.Add(hud1);
+            EnsureHudWebViewParent();
             dropout.Resize += dropout_Resize;
             dropout.FormClosed += dropout_FormClosed;
             dropout.RestoreStartupLocation();

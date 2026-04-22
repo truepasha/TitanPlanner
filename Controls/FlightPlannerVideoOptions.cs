@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DirectShowLib;
 using MissionPlanner.Utilities;
@@ -336,8 +337,7 @@ namespace MissionPlanner.Controls
             chkHudShow.Checked = Settings.Instance.GetBoolean("CHK_hudshow", GCSViews.FlightData.myhud.hudon);
 
             // Setup GStreamer start button state
-            btnGStreamerStart.Enabled = !GCSViews.FlightData.IsHudGStreamerRunning;
-            btnStreamStart.Enabled = !GCSViews.FlightData.IsHudGStreamerRunning;
+            SyncStreamControlStates();
 
             // Try to load saved video device
             try
@@ -552,6 +552,7 @@ namespace MissionPlanner.Controls
         {
             // Disable immediately to prevent spam clicking
             btnGStreamerStart.Enabled = false;
+            btnStreamStart.Enabled = false;
 
             var url = txtGStreamerSource.Text;
             if (string.IsNullOrWhiteSpace(url))
@@ -570,6 +571,7 @@ namespace MissionPlanner.Controls
 
                 if (!GStreamer.GstLaunchExists)
                 {
+                    SyncStreamControlStates();
                     btnGStreamerStart.Enabled = true;
                     return;
                 }
@@ -582,10 +584,12 @@ namespace MissionPlanner.Controls
                 GCSViews.FlightData.StopHudWebViewOverlay();
 
                 GCSViews.FlightData.StartHudGStreamer(url);
+                SyncStreamControlStates();
+                QueueStreamStateRefresh();
             }
             catch (Exception ex)
             {
-                btnGStreamerStart.Enabled = true;
+                SyncStreamControlStates();
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
             }
         }
@@ -594,8 +598,7 @@ namespace MissionPlanner.Controls
         {
             GCSViews.FlightData.StopHudGStreamer();
             GCSViews.FlightData.StopHudWebViewOverlay();
-            btnGStreamerStart.Enabled = true;
-            btnStreamStart.Enabled = true;
+            SyncStreamControlStates();
         }
 
         private void TxtStreamUrl_Leave(object sender, EventArgs e)
@@ -615,10 +618,12 @@ namespace MissionPlanner.Controls
             }
 
             btnStreamStart.Enabled = false;
+            btnGStreamerStart.Enabled = false;
 
             if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out var parsedUri))
             {
                 btnStreamStart.Enabled = true;
+                SyncStreamControlStates();
                 CustomMessageBox.Show("Invalid stream URL", Strings.ERROR);
                 return;
             }
@@ -627,6 +632,7 @@ namespace MissionPlanner.Controls
                 parsedUri.Scheme != Uri.UriSchemeHttps)
             {
                 btnStreamStart.Enabled = true;
+                SyncStreamControlStates();
                 CustomMessageBox.Show("Stream URL supports only web streams: http, https", Strings.ERROR);
                 return;
             }
@@ -638,9 +644,12 @@ namespace MissionPlanner.Controls
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
                 GCSViews.FlightData.StopHudGStreamer();
                 GCSViews.FlightData.StartHudWebViewOverlay(streamUrl);
+                SyncStreamControlStates();
+                QueueStreamStateRefresh();
             }
             catch (Exception ex)
             {
+                SyncStreamControlStates();
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
             }
         }
@@ -648,7 +657,30 @@ namespace MissionPlanner.Controls
         private void BtnStreamStop_Click(object sender, EventArgs e)
         {
             GCSViews.FlightData.StopHudWebViewOverlay();
-            btnStreamStart.Enabled = true;
+            SyncStreamControlStates();
+        }
+
+        private void SyncStreamControlStates()
+        {
+            var gstRunning = GCSViews.FlightData.IsHudGStreamerRunning;
+            var webRunning = GCSViews.FlightData.IsHudWebViewRunning;
+
+            btnGStreamerStart.Enabled = !gstRunning && !webRunning;
+            btnStreamStart.Enabled = !gstRunning && !webRunning;
+            btnGStreamerStop.Enabled = gstRunning;
+            btnStreamStop.Enabled = webRunning;
+        }
+
+        private void QueueStreamStateRefresh()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1500);
+                if (IsDisposed || !IsHandleCreated)
+                    return;
+
+                BeginInvoke((Action)SyncStreamControlStates);
+            });
         }
 
         private void CmbOsdColor_SelectedIndexChanged(object sender, EventArgs e)
