@@ -4,6 +4,8 @@ using GMap.NET;
 using GMap.NET.WindowsForms;
 using GMap.NET.WindowsForms.Markers;
 using log4net;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Scripting.Utils;
 using MissionPlanner.ArduPilot;
 using MissionPlanner.Controls;
@@ -45,6 +47,11 @@ namespace MissionPlanner.GCSViews
         public static readonly GStreamer hudGStreamer = new GStreamer();
         private static System.Threading.Thread _hudGStreamerThread = null;
         private static bool _hudGStreamerFirstFrame = false;
+        private static WebView2 _hudWebView;
+        private static System.Windows.Forms.Timer _hudWebViewCaptureTimer;
+        private static bool _hudWebViewCaptureInProgress;
+        private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
+        public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
 
         /// <summary>
         /// Starts the HUD GStreamer with the given pipeline, showing a loading indicator.
@@ -145,6 +152,104 @@ namespace MissionPlanner.GCSViews
             {
                 hudGStreamer.Stop();
             });
+        }
+
+        public static void StartHudWebViewOverlay(string url)
+        {
+            if (instance == null || myhud == null || string.IsNullOrWhiteSpace(url))
+                return;
+
+            StopHudGStreamer();
+
+            if (instance.InvokeRequired)
+            {
+                instance.BeginInvoke(new Action(() => StartHudWebViewOverlay(url)));
+                return;
+            }
+
+            _ = StartHudWebViewOverlayInternal(url);
+        }
+
+        private static async Task StartHudWebViewOverlayInternal(string url)
+        {
+            if (_hudWebViewCaptureTimer != null)
+                _hudWebViewCaptureTimer.Stop();
+
+            if (_hudWebView == null)
+            {
+                _hudWebView = new WebView2
+                {
+                    Dock = DockStyle.Fill
+                };
+                myhud.Parent.Controls.Add(_hudWebView);
+                _hudWebView.SendToBack();
+                myhud.BringToFront();
+            }
+
+            _hudWebView.Visible = true;
+
+            if (_hudWebView.CoreWebView2 == null)
+            {
+                await _hudWebView.EnsureCoreWebView2Async(null);
+                _hudWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                _hudWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+                _hudWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            }
+
+            _hudWebView.Source = new Uri(url);
+
+            if (_hudWebViewCaptureTimer == null)
+            {
+                _hudWebViewCaptureTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 20
+                };
+                _hudWebViewCaptureTimer.Tick += async (s, e) =>
+                {
+                    if (_hudWebView == null || _hudWebView.CoreWebView2 == null || _hudWebViewCaptureInProgress)
+                        return;
+
+                    _hudWebViewCaptureInProgress = true;
+                    try
+                    {
+                        _hudWebViewCaptureBuffer.SetLength(0);
+                        await _hudWebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Jpeg, _hudWebViewCaptureBuffer);
+                        _hudWebViewCaptureBuffer.Position = 0;
+                        using (var img = Image.FromStream(_hudWebViewCaptureBuffer))
+                        {
+                            myhud.bgimage = new Bitmap(img);
+                        }
+                    }
+                    catch
+                    {
+                        // ignore frame capture errors, keep timer alive
+                    }
+                    finally
+                    {
+                        _hudWebViewCaptureInProgress = false;
+                    }
+                };
+            }
+
+            _hudWebViewCaptureTimer.Start();
+        }
+
+        public static void StopHudWebViewOverlay()
+        {
+            if (instance == null)
+                return;
+
+            if (instance.InvokeRequired)
+            {
+                instance.BeginInvoke(new Action(StopHudWebViewOverlay));
+                return;
+            }
+
+            if (_hudWebViewCaptureTimer != null)
+                _hudWebViewCaptureTimer.Stop();
+
+            if (_hudWebView != null)
+                _hudWebView.Visible = false;
         }
         public static myGMAP mymap;
         public static bool threadrun;

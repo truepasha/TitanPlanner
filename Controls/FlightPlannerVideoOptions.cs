@@ -14,11 +14,15 @@ namespace MissionPlanner.Controls
         private Label labelVideoDevice;
         private Label labelVideoFormat;
         private Label labelOsdColor;
+        private Label labelStreamUrl;
         private Label labelGStreamer;
         private ComboBox cmbVideoSources;
         private ComboBox cmbVideoResolutions;
         private ComboBox cmbOsdColor;
         private TextBox txtGStreamerSource;
+        private TextBox txtStreamUrl;
+        private MyButton btnStreamStart;
+        private MyButton btnStreamStop;
         private MyButton btnGStreamerStart;
         private MyButton btnGStreamerStop;
         private MyButton btnVideoStart;
@@ -40,7 +44,11 @@ namespace MissionPlanner.Controls
             this.chkHudShow.CheckedChanged += ChkHudShow_CheckedChanged;
             this.btnGStreamerStart.Click += BtnGStreamerStart_Click;
             this.btnGStreamerStop.Click += BtnGStreamerStop_Click;
+            this.btnStreamStart.Click += BtnStreamStart_Click;
+            this.btnStreamStop.Click += BtnStreamStop_Click;
+            this.txtStreamUrl.Leave += TxtStreamUrl_Leave;
             this.VisibleChanged += FlightPlannerVideoOptions_VisibleChanged;
+            this.Resize += FlightPlannerVideoOptions_Resize;
         }
 
         private void FlightPlannerVideoOptions_VisibleChanged(object sender, EventArgs e)
@@ -49,7 +57,13 @@ namespace MissionPlanner.Controls
             {
                 // Sync HUD overlay checkbox with saved setting when tab becomes visible
                 chkHudShow.Checked = Settings.Instance.GetBoolean("CHK_hudshow", GCSViews.FlightData.myhud.hudon);
+                AdjustVideoLayout();
             }
+        }
+
+        private void FlightPlannerVideoOptions_Resize(object sender, EventArgs e)
+        {
+            AdjustVideoLayout();
         }
 
         private void InitializeComponent()
@@ -57,11 +71,15 @@ namespace MissionPlanner.Controls
             this.labelVideoDevice = new System.Windows.Forms.Label();
             this.labelVideoFormat = new System.Windows.Forms.Label();
             this.labelOsdColor = new System.Windows.Forms.Label();
+            this.labelStreamUrl = new System.Windows.Forms.Label();
             this.labelGStreamer = new System.Windows.Forms.Label();
             this.cmbVideoSources = new System.Windows.Forms.ComboBox();
             this.cmbVideoResolutions = new System.Windows.Forms.ComboBox();
             this.cmbOsdColor = new System.Windows.Forms.ComboBox();
             this.txtGStreamerSource = new System.Windows.Forms.TextBox();
+            this.txtStreamUrl = new System.Windows.Forms.TextBox();
+            this.btnStreamStart = new MissionPlanner.Controls.MyButton();
+            this.btnStreamStop = new MissionPlanner.Controls.MyButton();
             this.btnGStreamerStart = new MissionPlanner.Controls.MyButton();
             this.btnGStreamerStop = new MissionPlanner.Controls.MyButton();
             this.btnVideoStart = new MissionPlanner.Controls.MyButton();
@@ -96,13 +114,22 @@ namespace MissionPlanner.Controls
             this.labelOsdColor.TabIndex = 7;
             this.labelOsdColor.Text = "OSD Color";
             // 
+            // labelStreamUrl
+            // 
+            this.labelStreamUrl.AutoSize = true;
+            this.labelStreamUrl.Location = new System.Drawing.Point(10, 110);
+            this.labelStreamUrl.Name = "labelStreamUrl";
+            this.labelStreamUrl.Size = new System.Drawing.Size(78, 16);
+            this.labelStreamUrl.TabIndex = 9;
+            this.labelStreamUrl.Text = "Stream URL";
+            // 
             // labelGStreamer
             // 
             this.labelGStreamer.AutoSize = true;
             this.labelGStreamer.Location = new System.Drawing.Point(10, 140);
             this.labelGStreamer.Name = "labelGStreamer";
             this.labelGStreamer.Size = new System.Drawing.Size(72, 16);
-            this.labelGStreamer.TabIndex = 9;
+            this.labelGStreamer.TabIndex = 14;
             this.labelGStreamer.Text = "GStreamer";
             // 
             // cmbVideoSources
@@ -139,6 +166,37 @@ namespace MissionPlanner.Controls
             this.cmbOsdColor.Size = new System.Drawing.Size(629, 23);
             this.cmbOsdColor.TabIndex = 8;
             // 
+            // txtStreamUrl
+            // 
+            this.txtStreamUrl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtStreamUrl.Location = new System.Drawing.Point(120, 107);
+            this.txtStreamUrl.Name = "txtStreamUrl";
+            this.txtStreamUrl.Size = new System.Drawing.Size(514, 22);
+            this.txtStreamUrl.TabIndex = 10;
+            // 
+            // btnStreamStart
+            // 
+            this.btnStreamStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnStreamStart.Location = new System.Drawing.Point(640, 106);
+            this.btnStreamStart.Name = "btnStreamStart";
+            this.btnStreamStart.Size = new System.Drawing.Size(50, 23);
+            this.btnStreamStart.TabIndex = 11;
+            this.btnStreamStart.Text = "Start";
+            this.btnStreamStart.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
+            this.btnStreamStart.UseVisualStyleBackColor = true;
+            // 
+            // btnStreamStop
+            // 
+            this.btnStreamStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnStreamStop.Location = new System.Drawing.Point(699, 106);
+            this.btnStreamStop.Name = "btnStreamStop";
+            this.btnStreamStop.Size = new System.Drawing.Size(50, 23);
+            this.btnStreamStop.TabIndex = 12;
+            this.btnStreamStop.Text = "Stop";
+            this.btnStreamStop.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
+            this.btnStreamStop.UseVisualStyleBackColor = true;
+            // 
             // txtGStreamerSource
             // 
             this.txtGStreamerSource.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -146,8 +204,8 @@ namespace MissionPlanner.Controls
             this.txtGStreamerSource.Location = new System.Drawing.Point(120, 140);
             this.txtGStreamerSource.Multiline = true;
             this.txtGStreamerSource.Name = "txtGStreamerSource";
-            this.txtGStreamerSource.Size = new System.Drawing.Size(514, 40);
-            this.txtGStreamerSource.TabIndex = 10;
+            this.txtGStreamerSource.Size = new System.Drawing.Size(514, 32);
+            this.txtGStreamerSource.TabIndex = 15;
             // 
             // btnGStreamerStart
             // 
@@ -155,7 +213,7 @@ namespace MissionPlanner.Controls
             this.btnGStreamerStart.Location = new System.Drawing.Point(640, 140);
             this.btnGStreamerStart.Name = "btnGStreamerStart";
             this.btnGStreamerStart.Size = new System.Drawing.Size(50, 23);
-            this.btnGStreamerStart.TabIndex = 11;
+            this.btnGStreamerStart.TabIndex = 16;
             this.btnGStreamerStart.Text = "Start";
             this.btnGStreamerStart.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.btnGStreamerStart.UseVisualStyleBackColor = true;
@@ -166,7 +224,7 @@ namespace MissionPlanner.Controls
             this.btnGStreamerStop.Location = new System.Drawing.Point(699, 140);
             this.btnGStreamerStop.Name = "btnGStreamerStop";
             this.btnGStreamerStop.Size = new System.Drawing.Size(50, 23);
-            this.btnGStreamerStop.TabIndex = 12;
+            this.btnGStreamerStop.TabIndex = 17;
             this.btnGStreamerStop.Text = "Stop";
             this.btnGStreamerStop.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.btnGStreamerStop.UseVisualStyleBackColor = true;
@@ -217,6 +275,10 @@ namespace MissionPlanner.Controls
             this.Controls.Add(this.chkHudShow);
             this.Controls.Add(this.labelOsdColor);
             this.Controls.Add(this.cmbOsdColor);
+            this.Controls.Add(this.labelStreamUrl);
+            this.Controls.Add(this.txtStreamUrl);
+            this.Controls.Add(this.btnStreamStart);
+            this.Controls.Add(this.btnStreamStop);
             this.Controls.Add(this.labelGStreamer);
             this.Controls.Add(this.txtGStreamerSource);
             this.Controls.Add(this.btnGStreamerStart);
@@ -258,6 +320,7 @@ namespace MissionPlanner.Controls
             txtGStreamerSource.Text = Settings.Instance["gstreamer_url"] != null
                 ? Settings.Instance["gstreamer_url"]
                 : @"videotestsrc ! video/x-raw, width=1280, height=720, framerate=30/1 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink";
+            txtStreamUrl.Text = Settings.Instance["video_stream_url"] ?? string.Empty;
 
             // Setup video start/stop button states
             if (MainV2.cam != null)
@@ -274,6 +337,7 @@ namespace MissionPlanner.Controls
 
             // Setup GStreamer start button state
             btnGStreamerStart.Enabled = !GCSViews.FlightData.IsHudGStreamerRunning;
+            btnStreamStart.Enabled = !GCSViews.FlightData.IsHudGStreamerRunning;
 
             // Try to load saved video device
             try
@@ -295,6 +359,46 @@ namespace MissionPlanner.Controls
             catch { }
 
             startup = false;
+            AdjustVideoLayout();
+        }
+
+        private void AdjustVideoLayout()
+        {
+            if (ClientSize.Width <= 0)
+                return;
+
+            const int left = 120;
+            const int right = 10;
+            const int gap = 6;
+            const int buttonWidth = 50;
+
+            var stopX = ClientSize.Width - right - buttonWidth;
+            var startX = stopX - gap - buttonWidth;
+
+            // Vertical layout (DPI/font-safe)
+            var streamY = cmbOsdColor.Bottom + 14;
+            txtStreamUrl.Top = streamY;
+            labelStreamUrl.Top = streamY + 3;
+            btnStreamStart.Top = streamY;
+            btnStreamStop.Top = streamY;
+
+            var gstY = txtStreamUrl.Bottom + 16;
+            txtGStreamerSource.Top = gstY;
+            labelGStreamer.Top = gstY + 3;
+            btnGStreamerStart.Top = gstY;
+            btnGStreamerStop.Top = gstY;
+            txtGStreamerSource.Height = 38;
+
+            btnStreamStart.Left = startX;
+            btnStreamStop.Left = stopX;
+            btnGStreamerStart.Left = startX;
+            btnGStreamerStop.Left = stopX;
+
+            txtStreamUrl.Left = left;
+            txtStreamUrl.Width = Math.Max(150, startX - gap - txtStreamUrl.Left);
+
+            txtGStreamerSource.Left = left;
+            txtGStreamerSource.Width = Math.Max(150, startX - gap - txtGStreamerSource.Left);
         }
 
         private void CmbVideoSources_Click(object sender, EventArgs e)
@@ -475,6 +579,7 @@ namespace MissionPlanner.Controls
             {
                 // Apply HUD overlay setting
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                GCSViews.FlightData.StopHudWebViewOverlay();
 
                 GCSViews.FlightData.StartHudGStreamer(url);
             }
@@ -488,7 +593,62 @@ namespace MissionPlanner.Controls
         private void BtnGStreamerStop_Click(object sender, EventArgs e)
         {
             GCSViews.FlightData.StopHudGStreamer();
+            GCSViews.FlightData.StopHudWebViewOverlay();
             btnGStreamerStart.Enabled = true;
+            btnStreamStart.Enabled = true;
+        }
+
+        private void TxtStreamUrl_Leave(object sender, EventArgs e)
+        {
+            var value = txtStreamUrl.Text?.Trim();
+            if (!string.IsNullOrEmpty(value))
+                Settings.Instance["video_stream_url"] = value;
+        }
+
+        private void BtnStreamStart_Click(object sender, EventArgs e)
+        {
+            var streamUrl = txtStreamUrl.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(streamUrl))
+            {
+                CustomMessageBox.Show("Please enter stream URL", Strings.ERROR);
+                return;
+            }
+
+            btnStreamStart.Enabled = false;
+
+            if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out var parsedUri))
+            {
+                btnStreamStart.Enabled = true;
+                CustomMessageBox.Show("Invalid stream URL", Strings.ERROR);
+                return;
+            }
+
+            if (parsedUri.Scheme != Uri.UriSchemeHttp &&
+                parsedUri.Scheme != Uri.UriSchemeHttps)
+            {
+                btnStreamStart.Enabled = true;
+                CustomMessageBox.Show("Stream URL supports only web streams: http, https", Strings.ERROR);
+                return;
+            }
+
+            Settings.Instance["video_stream_url"] = streamUrl;
+
+            try
+            {
+                GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                GCSViews.FlightData.StopHudGStreamer();
+                GCSViews.FlightData.StartHudWebViewOverlay(streamUrl);
+            }
+            catch (Exception ex)
+            {
+                CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
+            }
+        }
+
+        private void BtnStreamStop_Click(object sender, EventArgs e)
+        {
+            GCSViews.FlightData.StopHudWebViewOverlay();
+            btnStreamStart.Enabled = true;
         }
 
         private void CmbOsdColor_SelectedIndexChanged(object sender, EventArgs e)
