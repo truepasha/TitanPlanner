@@ -393,18 +393,19 @@ namespace MissionPlanner.Controls
             var startX = stopX - gap - buttonWidth;
 
             // Vertical layout (DPI/font-safe)
-            var streamY = cmbOsdColor.Bottom + 10;
+            var streamY = cmbOsdColor.Bottom + 14;
             txtStreamUrl.Top = streamY;
             labelStreamUrl.Top = streamY + 3;
             btnStreamStart.Top = streamY;
             btnStreamStop.Top = streamY;
             labelCodecValue.Top = streamY + 3;
 
-            var gstY = txtStreamUrl.Bottom + 10;
+            var gstY = txtStreamUrl.Bottom + 16;
             txtGStreamerSource.Top = gstY;
             labelGStreamer.Top = gstY + 3;
             btnGStreamerStart.Top = gstY;
             btnGStreamerStop.Top = gstY;
+            txtGStreamerSource.Height = 38;
 
             btnStreamStart.Left = startX;
             btnStreamStop.Left = stopX;
@@ -607,6 +608,7 @@ namespace MissionPlanner.Controls
             {
                 // Apply HUD overlay setting
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                GCSViews.FlightData.StopHudWebViewOverlay();
 
                 GCSViews.FlightData.StartHudGStreamer(url);
                 labelCodecValue.Text = "Codec: " + DetectCodec(url);
@@ -621,6 +623,7 @@ namespace MissionPlanner.Controls
         private void BtnGStreamerStop_Click(object sender, EventArgs e)
         {
             GCSViews.FlightData.StopHudGStreamer();
+            GCSViews.FlightData.StopHudWebViewOverlay();
             btnGStreamerStart.Enabled = true;
             btnStreamStart.Enabled = true;
             labelCodecValue.Text = "Codec: -";
@@ -660,9 +663,30 @@ namespace MissionPlanner.Controls
                 return;
             }
 
+            Settings.Instance["video_stream_url"] = streamUrl;
+
+            // Browser-render mode for http(s): render WebView2 frames into HUD background
+            if (parsedUri.Scheme == Uri.UriSchemeHttp || parsedUri.Scheme == Uri.UriSchemeHttps)
+            {
+                try
+                {
+                    GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                    GCSViews.FlightData.StopHudGStreamer();
+                    GCSViews.FlightData.StartHudWebViewOverlay(streamUrl);
+                    labelCodecValue.Text = "Codec: Browser/WebRTC";
+                }
+
+                catch (Exception ex)
+                {
+                    btnStreamStart.Enabled = true;
+                    CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
+                }
+
+                return;
+            }
+
             var pipeline = BuildPipelineFromUrl(parsedUri);
             txtGStreamerSource.Text = pipeline;
-            Settings.Instance["video_stream_url"] = streamUrl;
             Settings.Instance["gstreamer_url"] = pipeline;
 
             GStreamer.GstLaunch = GStreamer.LookForGstreamer();
@@ -680,6 +704,7 @@ namespace MissionPlanner.Controls
             try
             {
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
+                GCSViews.FlightData.StopHudWebViewOverlay();
                 GCSViews.FlightData.StartHudGStreamer(pipeline);
                 labelCodecValue.Text = "Codec: " + DetectCodec(streamUrl);
             }
