@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DirectShowLib;
@@ -124,9 +125,9 @@ namespace MissionPlanner.Controls
             // 
             this.labelCodecValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.labelCodecValue.AutoEllipsis = true;
-            this.labelCodecValue.Location = new System.Drawing.Point(640, 110);
+            this.labelCodecValue.Location = new System.Drawing.Point(520, 110);
             this.labelCodecValue.Name = "labelCodecValue";
-            this.labelCodecValue.Size = new System.Drawing.Size(109, 18);
+            this.labelCodecValue.Size = new System.Drawing.Size(114, 18);
             this.labelCodecValue.TabIndex = 13;
             this.labelCodecValue.Text = "Codec: -";
             this.labelCodecValue.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -522,7 +523,6 @@ namespace MissionPlanner.Controls
         {
             // Disable immediately to prevent spam clicking
             btnGStreamerStart.Enabled = false;
-            btnStreamStart.Enabled = false;
 
             var url = txtGStreamerSource.Text;
             if (string.IsNullOrWhiteSpace(url))
@@ -542,7 +542,6 @@ namespace MissionPlanner.Controls
                 if (!GStreamer.GstLaunchExists)
                 {
                     btnGStreamerStart.Enabled = true;
-                    btnStreamStart.Enabled = true;
                     return;
                 }
             }
@@ -558,7 +557,6 @@ namespace MissionPlanner.Controls
             catch (Exception ex)
             {
                 btnGStreamerStart.Enabled = true;
-                btnStreamStart.Enabled = true;
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
             }
         }
@@ -588,12 +586,10 @@ namespace MissionPlanner.Controls
             }
 
             btnStreamStart.Enabled = false;
-            btnGStreamerStart.Enabled = false;
 
             if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out var parsedUri))
             {
                 btnStreamStart.Enabled = true;
-                btnGStreamerStart.Enabled = true;
                 CustomMessageBox.Show("Invalid stream URL", Strings.ERROR);
                 return;
             }
@@ -603,8 +599,17 @@ namespace MissionPlanner.Controls
                 parsedUri.Scheme != "rtsp")
             {
                 btnStreamStart.Enabled = true;
-                btnGStreamerStart.Enabled = true;
                 CustomMessageBox.Show("Supported URL schemes: http, https, rtsp", Strings.ERROR);
+                return;
+            }
+
+            if ((parsedUri.Scheme == Uri.UriSchemeHttp || parsedUri.Scheme == Uri.UriSchemeHttps) &&
+                IsHtmlPage(parsedUri.AbsoluteUri))
+            {
+                btnStreamStart.Enabled = true;
+                CustomMessageBox.Show(
+                    "This URL returns an HTML page, not a direct media stream.\nPlease provide a direct stream URL (rtsp/http media) or a raw GStreamer pipeline.",
+                    Strings.ERROR);
                 return;
             }
 
@@ -621,7 +626,6 @@ namespace MissionPlanner.Controls
                 if (!GStreamer.GstLaunchExists)
                 {
                     btnStreamStart.Enabled = true;
-                    btnGStreamerStart.Enabled = true;
                     return;
                 }
             }
@@ -635,7 +639,6 @@ namespace MissionPlanner.Controls
             catch (Exception ex)
             {
                 btnStreamStart.Enabled = true;
-                btnGStreamerStart.Enabled = true;
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR);
             }
         }
@@ -653,7 +656,30 @@ namespace MissionPlanner.Controls
                 return $"rtspsrc location=\"{location}\" latency=1 udp-reconnect=1 timeout=0 do-retransmission=false ! application/x-rtp ! decodebin ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
             }
 
-            return $"souphttpsrc location=\"{location}\" is-live=true do-timestamp=true ! queue ! decodebin ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
+            return $"uridecodebin uri=\"{location}\" ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
+        }
+
+        private static bool IsHtmlPage(string url)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "GET";
+                request.Timeout = 2500;
+                request.ReadWriteTimeout = 2500;
+                request.AllowAutoRedirect = true;
+                request.UserAgent = "MissionPlanner";
+
+                using (var response = (HttpWebResponse)request.GetResponse())
+                {
+                    var contentType = (response.ContentType ?? string.Empty).ToLowerInvariant();
+                    return contentType.Contains("text/html");
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static string DetectCodec(string source)
