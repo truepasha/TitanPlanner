@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using DirectShowLib;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 using MissionPlanner.Utilities;
 using WebCamService;
 using CameraCapture = WebCamService.Capture;
@@ -34,6 +36,10 @@ namespace MissionPlanner.Controls
         private CheckBox chkHudShow;
         private bool startup = true;
         private bool _httpStreamRunning;
+        private bool _webViewStreamRunning;
+        private bool _webCaptureBusy;
+        private WebView2 _webStreamView;
+        private Timer _webCaptureTimer;
 
         public FlightPlannerVideoOptions()
         {
@@ -607,7 +613,7 @@ namespace MissionPlanner.Controls
             btnGStreamerStart.Enabled = true;
         }
 
-        private void BtnWebStreamStart_Click(object sender, EventArgs e)
+        private async void BtnWebStreamStart_Click(object sender, EventArgs e)
         {
             var url = txtWebStreamUrl.Text?.Trim();
             if (string.IsNullOrWhiteSpace(url))
@@ -631,14 +637,12 @@ namespace MissionPlanner.Controls
                 // Apply HUD overlay setting so telemetry remains over the video background.
                 GCSViews.FlightData.myhud.hudon = chkHudShow.Checked;
                 StopHudVideoInputsForHttp();
-                StartHttpHudStream(uri);
+                await StartHttpHudStreamAsync(uri);
             }
             catch (Exception ex)
             {
                 btnWebStreamStart.Enabled = true;
-                CustomMessageBox.Show("Failed to start web stream: " + ex.Message +
-                                      "\nUse a direct MJPEG URL (multipart/x-mixed-replace or JPEG stream), not a webpage player link.",
-                    Strings.ERROR);
+                CustomMessageBox.Show("Failed to start web stream: " + ex.Message, Strings.ERROR);
             }
         }
 
@@ -660,27 +664,34 @@ namespace MissionPlanner.Controls
             }
         }
 
-        private void StartHttpHudStream(Uri uri)
-        {
-            StopHttpHudStream();
-            var streamUrl = TryResolveMjpegUrl(uri);
-            if (string.IsNullOrWhiteSpace(streamUrl))
-                streamUrl = uri.ToString();
-
-            CaptureMJPEG.URL = streamUrl;
-            CaptureMJPEG.runAsync();
-            _httpStreamRunning = true;
-            btnWebStreamStart.Enabled = false;
-        }
-
         private void StopHttpHudStream()
         {
+            StopWebViewHudStream();
+
             if (_httpStreamRunning)
             {
                 CaptureMJPEG.Stop();
                 _httpStreamRunning = false;
             }
             btnWebStreamStart.Enabled = true;
+        }
+
+        private async System.Threading.Tasks.Task StartHttpHudStreamAsync(Uri uri)
+        {
+            StopHttpHudStream();
+            var streamUrl = TryResolveMjpegUrl(uri);
+
+            if (!string.IsNullOrWhiteSpace(streamUrl))
+            {
+                CaptureMJPEG.URL = streamUrl;
+                CaptureMJPEG.runAsync();
+                _httpStreamRunning = true;
+                btnWebStreamStart.Enabled = false;
+                return;
+            }
+
+            await StartWebViewHudStreamAsync(uri);
+            btnWebStreamStart.Enabled = false;
         }
 
         private string TryResolveMjpegUrl(Uri inputUri)
@@ -717,6 +728,9 @@ namespace MissionPlanner.Controls
                         var probed = ProbeCommonMjpegEndpoints(response.ResponseUri ?? inputUri);
                         if (!string.IsNullOrWhiteSpace(probed))
                             return probed;
+
+                        // Page URL with JS/WebRTC/HLS player - not direct MJPEG.
+                        return null;
                     }
                 }
             }
@@ -726,6 +740,97 @@ namespace MissionPlanner.Controls
             }
 
             return inputUri.ToString();
+        }
+
+        private async System.Threading.Tasks.Task StartWebViewHudStreamAsync(Uri uri)
+        {
+            await EnsureHiddenWebViewAsync();
+
+            _webViewStreamRunning = true;
+            _webStreamView.Source = uri;
+            _webCaptureTimer?.Start();
+        }
+
+        private void StopWebViewHudStream()
+        {
+            _webViewStreamRunning = false;
+            _webCaptureBusy = false;
+
+            _webCaptureTimer?.Stop();
+
+            try
+            {
+                if (_webStreamView?.CoreWebView2 != null)
+                    _webStreamView.CoreWebView2.Navigate("about:blank");
+            }
+            catch { }
+        }
+
+        private async System.Threading.Tasks.Task EnsureHiddenWebViewAsync()
+        {
+            if (_webStreamView == null)
+            {
+                _webStreamView = new WebView2
+                {
+                    Name = "hiddenWebStreamView",
+                    Visible = false,
+                    Width = 1280,
+                    Height = 720,
+                    Location = new Point(-4000, -4000),
+                    TabStop = false
+                };
+
+                Controls.Add(_webStreamView);
+            }
+
+            if (_webStreamView.CoreWebView2 == null)
+            {
+                await _webStreamView.EnsureCoreWebView2Async(null);
+                _webStreamView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                _webStreamView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+                _webStreamView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+            }
+
+            if (_webCaptureTimer == null)
+            {
+                _webCaptureTimer = new Timer { Interval = 100 };
+                _webCaptureTimer.Tick += async (s, e) => await CaptureWebViewFrameToHudAsync();
+            }
+        }
+
+        private async System.Threading.Tasks.Task CaptureWebViewFrameToHudAsync()
+        {
+            if (!_webViewStreamRunning || _webCaptureBusy || _webStreamView?.CoreWebView2 == null)
+                return;
+
+            _webCaptureBusy = true;
+
+            try
+            {
+                using (var ms = new MemoryStream())
+                {
+                    await _webStreamView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
+                    if (ms.Length <= 0)
+                        return;
+
+                    ms.Position = 0;
+                    using (var img = Image.FromStream(ms))
+                    {
+                        var bmp = new Bitmap(img);
+                        var old = GCSViews.FlightData.myhud.bgimage;
+                        GCSViews.FlightData.myhud.bgimage = bmp;
+                        old?.Dispose();
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore transient capture failures while page/video is initializing.
+            }
+            finally
+            {
+                _webCaptureBusy = false;
+            }
         }
 
         private static string ExtractMjpegCandidateFromHtml(string html, Uri baseUri)
