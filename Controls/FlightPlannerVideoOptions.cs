@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using DirectShowLib;
 using MissionPlanner.Utilities;
 using WebCamService;
+using CameraCapture = WebCamService.Capture;
 
 namespace MissionPlanner.Controls
 {
@@ -417,7 +418,7 @@ namespace MissionPlanner.Controls
 
             try
             {
-                var capt = new Capture();
+                var capt = new CameraCapture();
                 var devices = WebCamService.Capture.getDevices();
                 cmbVideoSources.DataSource = devices;
                 capt.Dispose();
@@ -519,7 +520,7 @@ namespace MissionPlanner.Controls
 
             try
             {
-                MainV2.cam = new Capture(cmbVideoSources.SelectedIndex, bmp.Media);
+                MainV2.cam = new CameraCapture(cmbVideoSources.SelectedIndex, bmp.Media);
                 MainV2.cam.Start();
 
                 // Apply HUD overlay setting
