@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DirectShowLib;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 using MissionPlanner.Utilities;
 using WebCamService;
 
@@ -15,16 +17,23 @@ namespace MissionPlanner.Controls
         private Label labelVideoFormat;
         private Label labelOsdColor;
         private Label labelGStreamer;
+        private Label labelWebStream;
         private ComboBox cmbVideoSources;
         private ComboBox cmbVideoResolutions;
         private ComboBox cmbOsdColor;
         private TextBox txtGStreamerSource;
+        private TextBox txtWebStreamUrl;
         private MyButton btnGStreamerStart;
         private MyButton btnGStreamerStop;
+        private MyButton btnWebStreamStart;
+        private MyButton btnWebStreamStop;
         private MyButton btnVideoStart;
         private MyButton btnVideoStop;
         private CheckBox chkHudShow;
+        private Panel pnlWebStreamHost;
+        private WebView2 webStreamView;
         private bool startup = true;
+        private bool webViewInitialized;
 
         public FlightPlannerVideoOptions()
         {
@@ -40,6 +49,8 @@ namespace MissionPlanner.Controls
             this.chkHudShow.CheckedChanged += ChkHudShow_CheckedChanged;
             this.btnGStreamerStart.Click += BtnGStreamerStart_Click;
             this.btnGStreamerStop.Click += BtnGStreamerStop_Click;
+            this.btnWebStreamStart.Click += BtnWebStreamStart_Click;
+            this.btnWebStreamStop.Click += BtnWebStreamStop_Click;
             this.VisibleChanged += FlightPlannerVideoOptions_VisibleChanged;
         }
 
@@ -58,15 +69,20 @@ namespace MissionPlanner.Controls
             this.labelVideoFormat = new System.Windows.Forms.Label();
             this.labelOsdColor = new System.Windows.Forms.Label();
             this.labelGStreamer = new System.Windows.Forms.Label();
+            this.labelWebStream = new System.Windows.Forms.Label();
             this.cmbVideoSources = new System.Windows.Forms.ComboBox();
             this.cmbVideoResolutions = new System.Windows.Forms.ComboBox();
             this.cmbOsdColor = new System.Windows.Forms.ComboBox();
             this.txtGStreamerSource = new System.Windows.Forms.TextBox();
+            this.txtWebStreamUrl = new System.Windows.Forms.TextBox();
             this.btnGStreamerStart = new MissionPlanner.Controls.MyButton();
             this.btnGStreamerStop = new MissionPlanner.Controls.MyButton();
+            this.btnWebStreamStart = new MissionPlanner.Controls.MyButton();
+            this.btnWebStreamStop = new MissionPlanner.Controls.MyButton();
             this.btnVideoStart = new MissionPlanner.Controls.MyButton();
             this.btnVideoStop = new MissionPlanner.Controls.MyButton();
             this.chkHudShow = new System.Windows.Forms.CheckBox();
+            this.pnlWebStreamHost = new System.Windows.Forms.Panel();
             this.SuspendLayout();
             // 
             // labelVideoDevice
@@ -171,6 +187,57 @@ namespace MissionPlanner.Controls
             this.btnGStreamerStop.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.btnGStreamerStop.UseVisualStyleBackColor = true;
             // 
+            // labelWebStream
+            // 
+            this.labelWebStream.AutoSize = true;
+            this.labelWebStream.Location = new System.Drawing.Point(10, 190);
+            this.labelWebStream.Name = "labelWebStream";
+            this.labelWebStream.Size = new System.Drawing.Size(95, 16);
+            this.labelWebStream.TabIndex = 13;
+            this.labelWebStream.Text = "HTTP/WebRTC";
+            // 
+            // txtWebStreamUrl
+            // 
+            this.txtWebStreamUrl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtWebStreamUrl.Location = new System.Drawing.Point(120, 187);
+            this.txtWebStreamUrl.Name = "txtWebStreamUrl";
+            this.txtWebStreamUrl.Size = new System.Drawing.Size(514, 22);
+            this.txtWebStreamUrl.TabIndex = 14;
+            // 
+            // btnWebStreamStart
+            // 
+            this.btnWebStreamStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnWebStreamStart.Location = new System.Drawing.Point(640, 187);
+            this.btnWebStreamStart.Name = "btnWebStreamStart";
+            this.btnWebStreamStart.Size = new System.Drawing.Size(50, 23);
+            this.btnWebStreamStart.TabIndex = 15;
+            this.btnWebStreamStart.Text = "Start";
+            this.btnWebStreamStart.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
+            this.btnWebStreamStart.UseVisualStyleBackColor = true;
+            // 
+            // btnWebStreamStop
+            // 
+            this.btnWebStreamStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnWebStreamStop.Location = new System.Drawing.Point(699, 187);
+            this.btnWebStreamStop.Name = "btnWebStreamStop";
+            this.btnWebStreamStop.Size = new System.Drawing.Size(50, 23);
+            this.btnWebStreamStop.TabIndex = 16;
+            this.btnWebStreamStop.Text = "Stop";
+            this.btnWebStreamStop.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
+            this.btnWebStreamStop.UseVisualStyleBackColor = true;
+            // 
+            // pnlWebStreamHost
+            // 
+            this.pnlWebStreamHost.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pnlWebStreamHost.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlWebStreamHost.Location = new System.Drawing.Point(10, 220);
+            this.pnlWebStreamHost.Name = "pnlWebStreamHost";
+            this.pnlWebStreamHost.Size = new System.Drawing.Size(739, 200);
+            this.pnlWebStreamHost.TabIndex = 17;
+            // 
             // btnVideoStart
             // 
             this.btnVideoStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -221,8 +288,13 @@ namespace MissionPlanner.Controls
             this.Controls.Add(this.txtGStreamerSource);
             this.Controls.Add(this.btnGStreamerStart);
             this.Controls.Add(this.btnGStreamerStop);
+            this.Controls.Add(this.labelWebStream);
+            this.Controls.Add(this.txtWebStreamUrl);
+            this.Controls.Add(this.btnWebStreamStart);
+            this.Controls.Add(this.btnWebStreamStop);
+            this.Controls.Add(this.pnlWebStreamHost);
             this.Name = "FlightPlannerVideoOptions";
-            this.Size = new System.Drawing.Size(760, 200);
+            this.Size = new System.Drawing.Size(760, 430);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -259,6 +331,8 @@ namespace MissionPlanner.Controls
                 ? Settings.Instance["gstreamer_url"]
                 : @"videotestsrc ! video/x-raw, width=1280, height=720, framerate=30/1 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink";
 
+            txtWebStreamUrl.Text = Settings.Instance["web_stream_url"] ?? "http://";
+
             // Setup video start/stop button states
             if (MainV2.cam != null)
             {
@@ -274,6 +348,7 @@ namespace MissionPlanner.Controls
 
             // Setup GStreamer start button state
             btnGStreamerStart.Enabled = !GCSViews.FlightData.IsHudGStreamerRunning;
+            btnWebStreamStart.Enabled = true;
 
             // Try to load saved video device
             try
@@ -489,6 +564,84 @@ namespace MissionPlanner.Controls
         {
             GCSViews.FlightData.StopHudGStreamer();
             btnGStreamerStart.Enabled = true;
+        }
+
+        private async void BtnWebStreamStart_Click(object sender, EventArgs e)
+        {
+            var url = txtWebStreamUrl.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                CustomMessageBox.Show("Enter an HTTP/HTTPS stream URL.");
+                return;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                CustomMessageBox.Show("Only HTTP/HTTPS URLs are supported.");
+                return;
+            }
+
+            try
+            {
+                btnWebStreamStart.Enabled = false;
+                Settings.Instance["web_stream_url"] = uri.ToString();
+                await EnsureWebViewInitializedAsync();
+                webStreamView.Source = uri;
+            }
+            catch (Exception ex)
+            {
+                btnWebStreamStart.Enabled = true;
+                CustomMessageBox.Show("Failed to start web stream: " + ex.Message, Strings.ERROR);
+            }
+        }
+
+        private void BtnWebStreamStop_Click(object sender, EventArgs e)
+        {
+            if (webStreamView?.CoreWebView2 != null)
+            {
+                webStreamView.CoreWebView2.Stop();
+                webStreamView.Source = new Uri("about:blank");
+            }
+
+            btnWebStreamStart.Enabled = true;
+        }
+
+        private async System.Threading.Tasks.Task EnsureWebViewInitializedAsync()
+        {
+            if (webStreamView == null)
+            {
+                webStreamView = new WebView2
+                {
+                    Dock = DockStyle.Fill,
+                    Name = "webStreamView"
+                };
+
+                pnlWebStreamHost.Controls.Add(webStreamView);
+            }
+
+            if (!webViewInitialized)
+            {
+                await webStreamView.EnsureCoreWebView2Async(null);
+                webStreamView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                webStreamView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+                webStreamView.CoreWebView2.Settings.IsZoomControlEnabled = true;
+                webStreamView.CoreWebView2.Settings.IsScriptEnabled = true;
+                await webStreamView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+                    "document.addEventListener('contextmenu', e => e.preventDefault());");
+
+                webStreamView.NavigationCompleted += WebStreamView_NavigationCompleted;
+                webViewInitialized = true;
+            }
+        }
+
+        private void WebStreamView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            btnWebStreamStart.Enabled = true;
+            if (!e.IsSuccess)
+            {
+                CustomMessageBox.Show("Web stream navigation failed. Check the URL and stream availability.");
+            }
         }
 
         private void CmbOsdColor_SelectedIndexChanged(object sender, EventArgs e)
