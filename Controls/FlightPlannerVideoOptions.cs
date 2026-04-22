@@ -37,9 +37,11 @@ namespace MissionPlanner.Controls
         private CheckBox chkHudShow;
         private bool startup = true;
         private bool _httpStreamRunning;
+        private bool _httpViaGStreamer;
         private bool _webViewStreamRunning;
         private bool _webCaptureBusy;
         private WebView2 _webStreamView;
+        private Form _webCaptureHostForm;
         private Timer _webCaptureTimer;
         private bool _webPlaybackScriptInstalled;
         private Uri _webStreamUri;
@@ -317,7 +319,15 @@ namespace MissionPlanner.Controls
         protected override void Dispose(bool disposing)
         {
             if (disposing)
+            {
                 StopHttpHudStream();
+                if (_webCaptureHostForm != null && !_webCaptureHostForm.IsDisposed)
+                {
+                    _webCaptureHostForm.Close();
+                    _webCaptureHostForm.Dispose();
+                    _webCaptureHostForm = null;
+                }
+            }
 
             base.Dispose(disposing);
         }
@@ -676,6 +686,12 @@ namespace MissionPlanner.Controls
         {
             StopWebViewHudStream();
 
+            if (_httpViaGStreamer)
+            {
+                GCSViews.FlightData.StopHudGStreamer();
+                _httpViaGStreamer = false;
+            }
+
             if (_httpStreamRunning)
             {
                 CaptureMJPEG.Stop();
@@ -687,6 +703,30 @@ namespace MissionPlanner.Controls
         private async System.Threading.Tasks.Task StartHttpHudStreamAsync(Uri uri)
         {
             StopHttpHudStream();
+
+            // 1) First try a native GStreamer pipeline for best FPS/latency.
+            // This path avoids WebView screenshot capture bottlenecks and is suitable for RTSP/HTTP media URIs.
+            var gstPipeline = BuildGStreamerPipelineForUri(uri);
+            if (!string.IsNullOrWhiteSpace(gstPipeline))
+            {
+                try
+                {
+                    GStreamer.GstLaunch = GStreamer.LookForGstreamer();
+                    if (GStreamer.GstLaunchExists)
+                    {
+                        GCSViews.FlightData.StartHudGStreamer(gstPipeline);
+                        _httpViaGStreamer = true;
+                        btnWebStreamStart.Enabled = false;
+                        return;
+                    }
+                }
+                catch
+                {
+                    // If this URL isn't a direct media source (e.g. HTML player page), fall back below.
+                }
+            }
+
+            // 2) Try MJPEG path for common HTTP cameras.
             var streamUrl = TryResolveMjpegUrl(uri);
 
             if (!string.IsNullOrWhiteSpace(streamUrl))
@@ -783,6 +823,8 @@ namespace MissionPlanner.Controls
 
         private async System.Threading.Tasks.Task EnsureHiddenWebViewAsync()
         {
+            EnsureWebCaptureHostForm();
+
             if (_webStreamView == null)
             {
                 _webStreamView = new WebView2
@@ -795,8 +837,8 @@ namespace MissionPlanner.Controls
                     TabStop = false
                 };
 
-                Controls.Add(_webStreamView);
-                _webStreamView.SendToBack();
+                _webCaptureHostForm.Controls.Add(_webStreamView);
+                _webStreamView.BringToFront();
             }
 
             if (_webStreamView.CoreWebView2 == null)
@@ -858,6 +900,25 @@ namespace MissionPlanner.Controls
                 _webCaptureTimer = new Timer { Interval = 8 };
                 _webCaptureTimer.Tick += async (s, e) => await CaptureWebViewFrameToHudAsync();
             }
+        }
+
+        private void EnsureWebCaptureHostForm()
+        {
+            if (_webCaptureHostForm != null && !_webCaptureHostForm.IsDisposed)
+                return;
+
+            _webCaptureHostForm = new Form
+            {
+                ShowInTaskbar = false,
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point(-32000, -32000),
+                Size = new Size(1280, 720),
+                Opacity = 0.01,
+                TopMost = false
+            };
+
+            _webCaptureHostForm.Show();
         }
 
         private async System.Threading.Tasks.Task ForceWebPlaybackAsync()
@@ -1038,6 +1099,29 @@ namespace MissionPlanner.Controls
 
                 if (Uri.TryCreate(baseUri, raw, out var absolute))
                     return absolute.ToString();
+            }
+
+            return null;
+        }
+
+        private static string BuildGStreamerPipelineForUri(Uri uri)
+        {
+            if (uri == null)
+                return null;
+
+            var escaped = uri.AbsoluteUri.Replace("\"", "%22");
+            var scheme = uri.Scheme.ToLowerInvariant();
+
+            if (scheme == Uri.UriSchemeRtsp)
+            {
+                return
+                    $"rtspsrc location={escaped} latency=1 udp-reconnect=1 timeout=0 do-retransmission=false ! application/x-rtp ! decodebin3 ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
+            }
+
+            if (scheme == Uri.UriSchemeHttp || scheme == Uri.UriSchemeHttps)
+            {
+                return
+                    $"uridecodebin3 uri=\"{escaped}\" ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
             }
 
             return null;
