@@ -135,7 +135,7 @@ namespace MissionPlanner.Controls
             // labelGStreamer
             // 
             this.labelGStreamer.AutoSize = true;
-            this.labelGStreamer.Location = new System.Drawing.Point(10, 170);
+            this.labelGStreamer.Location = new System.Drawing.Point(10, 140);
             this.labelGStreamer.Name = "labelGStreamer";
             this.labelGStreamer.Size = new System.Drawing.Size(72, 16);
             this.labelGStreamer.TabIndex = 14;
@@ -187,7 +187,7 @@ namespace MissionPlanner.Controls
             // btnStreamStart
             // 
             this.btnStreamStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnStreamStart.Location = new System.Drawing.Point(640, 135);
+            this.btnStreamStart.Location = new System.Drawing.Point(640, 106);
             this.btnStreamStart.Name = "btnStreamStart";
             this.btnStreamStart.Size = new System.Drawing.Size(50, 23);
             this.btnStreamStart.TabIndex = 11;
@@ -198,7 +198,7 @@ namespace MissionPlanner.Controls
             // btnStreamStop
             // 
             this.btnStreamStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnStreamStop.Location = new System.Drawing.Point(699, 135);
+            this.btnStreamStop.Location = new System.Drawing.Point(699, 106);
             this.btnStreamStop.Name = "btnStreamStop";
             this.btnStreamStop.Size = new System.Drawing.Size(50, 23);
             this.btnStreamStop.TabIndex = 12;
@@ -210,16 +210,16 @@ namespace MissionPlanner.Controls
             // 
             this.txtGStreamerSource.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtGStreamerSource.Location = new System.Drawing.Point(120, 170);
+            this.txtGStreamerSource.Location = new System.Drawing.Point(120, 140);
             this.txtGStreamerSource.Multiline = true;
             this.txtGStreamerSource.Name = "txtGStreamerSource";
-            this.txtGStreamerSource.Size = new System.Drawing.Size(514, 40);
+            this.txtGStreamerSource.Size = new System.Drawing.Size(514, 32);
             this.txtGStreamerSource.TabIndex = 15;
             // 
             // btnGStreamerStart
             // 
             this.btnGStreamerStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnGStreamerStart.Location = new System.Drawing.Point(640, 170);
+            this.btnGStreamerStart.Location = new System.Drawing.Point(640, 140);
             this.btnGStreamerStart.Name = "btnGStreamerStart";
             this.btnGStreamerStart.Size = new System.Drawing.Size(50, 23);
             this.btnGStreamerStart.TabIndex = 16;
@@ -230,7 +230,7 @@ namespace MissionPlanner.Controls
             // btnGStreamerStop
             // 
             this.btnGStreamerStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnGStreamerStop.Location = new System.Drawing.Point(699, 170);
+            this.btnGStreamerStop.Location = new System.Drawing.Point(699, 140);
             this.btnGStreamerStop.Name = "btnGStreamerStop";
             this.btnGStreamerStop.Size = new System.Drawing.Size(50, 23);
             this.btnGStreamerStop.TabIndex = 17;
@@ -294,7 +294,7 @@ namespace MissionPlanner.Controls
             this.Controls.Add(this.btnGStreamerStart);
             this.Controls.Add(this.btnGStreamerStop);
             this.Name = "FlightPlannerVideoOptions";
-            this.Size = new System.Drawing.Size(760, 230);
+            this.Size = new System.Drawing.Size(760, 200);
             this.ResumeLayout(false);
             this.PerformLayout();
 
