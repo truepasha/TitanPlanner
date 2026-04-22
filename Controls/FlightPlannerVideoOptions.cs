@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using DirectShowLib;
 using MissionPlanner.Utilities;
@@ -694,7 +693,7 @@ namespace MissionPlanner.Controls
                     }
 
                     var output = (process.StandardOutput.ReadToEnd() + "\n" + process.StandardError.ReadToEnd()).Trim();
-                    var match = Regex.Match(output, @"Codec:\s*(.+)", RegexOptions.IgnoreCase);
+                    var match = System.Text.RegularExpressions.Regex.Match(output, @"Codec:\s*(.+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                     if (match.Success)
                         return match.Groups[1].Value.Trim();
                 }
