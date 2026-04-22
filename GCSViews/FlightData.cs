@@ -53,8 +53,10 @@ namespace MissionPlanner.GCSViews
         private static int _hudWebViewConsecutiveCaptureErrors;
         private static bool _hudWebViewHadSuccessfulCapture;
         private static bool _hudWebViewOfflineMessageShown;
+        private static bool _hudWebViewStretchToHud;
         private static readonly MemoryStream _hudWebViewCaptureBuffer = new MemoryStream(1024 * 1024);
         public static bool IsHudWebViewRunning => _hudWebView != null && _hudWebView.Visible;
+        public static void SetHudWebViewStretchToHud(bool enabled) => _hudWebViewStretchToHud = enabled;
 
         /// <summary>
         /// Starts the HUD GStreamer with the given pipeline, showing a loading indicator.
@@ -223,7 +225,7 @@ namespace MissionPlanner.GCSViews
                         _hudWebViewCaptureBuffer.Position = 0;
                         using (var img = Image.FromStream(_hudWebViewCaptureBuffer))
                         {
-                            myhud.bgimage = new Bitmap(img);
+                            myhud.bgimage = BuildHudWebViewFrame(img);
                         }
 
                         _hudWebViewConsecutiveCaptureErrors = 0;
@@ -278,7 +280,22 @@ namespace MissionPlanner.GCSViews
                     _hudWebView.CoreWebView2.Navigate("about:blank");
                 }
             }
+            myhud.bgimage = null;
 
+        }
+
+        private static Bitmap BuildHudWebViewFrame(Image image)
+        {
+            if (!_hudWebViewStretchToHud || myhud == null || myhud.Width <= 0 || myhud.Height <= 0)
+                return new Bitmap(image);
+
+            var stretchedFrame = new Bitmap(myhud.Width, myhud.Height);
+            using (var graphics = Graphics.FromImage(stretchedFrame))
+            {
+                graphics.DrawImage(image, 0, 0, stretchedFrame.Width, stretchedFrame.Height);
+            }
+
+            return stretchedFrame;
         }
 
         private static void EnsureHudWebViewParent()
@@ -4312,6 +4329,7 @@ namespace MissionPlanner.GCSViews
         private void hud1_Resize(object sender, EventArgs e)
         {
             Console.WriteLine("HUD resize " + hud1.Width + " " + hud1.Height); // +"\n"+ System.Environment.StackTrace);
+            EnsureHudWebViewParent();
 
             if (hud1.Parent == this.SubMainLeft.Panel1)
             {
@@ -5791,6 +5809,7 @@ namespace MissionPlanner.GCSViews
             hud1.SixteenXNine = !hud1.SixteenXNine;
             Settings.Instance["HUD_SixteenXNine"] = hud1.SixteenXNine.ToString();
             hud1.doResize();
+            EnsureHudWebViewParent();
         }
 
         private void setEKFHomeHereToolStripMenuItem_Click(object sender, EventArgs e)
