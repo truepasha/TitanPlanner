@@ -665,7 +665,7 @@ namespace MissionPlanner.Controls
             StopHttpHudStream();
             var streamUrl = TryResolveMjpegUrl(uri);
             if (string.IsNullOrWhiteSpace(streamUrl))
-                throw new InvalidOperationException("Could not resolve a direct MJPEG stream URL from the provided link.");
+                streamUrl = uri.ToString();
 
             CaptureMJPEG.URL = streamUrl;
             CaptureMJPEG.runAsync();
@@ -685,8 +685,6 @@ namespace MissionPlanner.Controls
 
         private string TryResolveMjpegUrl(Uri inputUri)
         {
-            bool htmlPageWithoutDirectStream = false;
-
             try
             {
                 var request = (HttpWebRequest)WebRequest.Create(inputUri);
@@ -705,7 +703,6 @@ namespace MissionPlanner.Controls
 
                     if (contentType.Contains("text/html"))
                     {
-                        htmlPageWithoutDirectStream = true;
                         using (var stream = response.GetResponseStream())
                         using (var reader = new StreamReader(stream ?? Stream.Null))
                         {
@@ -714,6 +711,12 @@ namespace MissionPlanner.Controls
                             if (!string.IsNullOrWhiteSpace(candidate))
                                 return candidate;
                         }
+
+                        // Common case: user pasted a player page URL.
+                        // Try typical MJPEG endpoint suffixes near the same path.
+                        var probed = ProbeCommonMjpegEndpoints(response.ResponseUri ?? inputUri);
+                        if (!string.IsNullOrWhiteSpace(probed))
+                            return probed;
                     }
                 }
             }
@@ -721,9 +724,6 @@ namespace MissionPlanner.Controls
             {
                 // Fall back to the original URL.
             }
-
-            if (htmlPageWithoutDirectStream)
-                return null;
 
             return inputUri.ToString();
         }
@@ -750,6 +750,40 @@ namespace MissionPlanner.Controls
 
                 if (Uri.TryCreate(baseUri, raw, out var absolute))
                     return absolute.ToString();
+            }
+
+            return null;
+        }
+
+        private static string ProbeCommonMjpegEndpoints(Uri baseUri)
+        {
+            string[] probes =
+            {
+                "mjpeg", "mjpg", "stream", "video", "feed", "video.mjpg", "stream.mjpg", "mjpegstream"
+            };
+
+            foreach (var probe in probes)
+            {
+                try
+                {
+                    var candidateUri = new Uri(baseUri, probe);
+                    var req = (HttpWebRequest)WebRequest.Create(candidateUri);
+                    req.Method = "GET";
+                    req.AllowAutoRedirect = true;
+                    req.Timeout = 3000;
+                    req.ReadWriteTimeout = 3000;
+
+                    using (var res = (HttpWebResponse)req.GetResponse())
+                    {
+                        var ct = (res.ContentType ?? string.Empty).ToLowerInvariant();
+                        if (ct.Contains("multipart/x-mixed-replace") || ct.Contains("image/jpeg"))
+                            return res.ResponseUri?.ToString() ?? candidateUri.ToString();
+                    }
+                }
+                catch
+                {
+                    // Try next candidate.
+                }
             }
 
             return null;
