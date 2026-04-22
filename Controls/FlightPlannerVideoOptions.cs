@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DirectShowLib;
@@ -52,6 +51,7 @@ namespace MissionPlanner.Controls
             this.btnStreamStop.Click += BtnStreamStop_Click;
             this.txtStreamUrl.Leave += TxtStreamUrl_Leave;
             this.VisibleChanged += FlightPlannerVideoOptions_VisibleChanged;
+            this.Resize += FlightPlannerVideoOptions_Resize;
         }
 
         private void FlightPlannerVideoOptions_VisibleChanged(object sender, EventArgs e)
@@ -60,7 +60,13 @@ namespace MissionPlanner.Controls
             {
                 // Sync HUD overlay checkbox with saved setting when tab becomes visible
                 chkHudShow.Checked = Settings.Instance.GetBoolean("CHK_hudshow", GCSViews.FlightData.myhud.hudon);
+                AdjustVideoLayout();
             }
+        }
+
+        private void FlightPlannerVideoOptions_Resize(object sender, EventArgs e)
+        {
+            AdjustVideoLayout();
         }
 
         private void InitializeComponent()
@@ -370,6 +376,57 @@ namespace MissionPlanner.Controls
             catch { }
 
             startup = false;
+            AdjustVideoLayout();
+        }
+
+        private void AdjustVideoLayout()
+        {
+            if (ClientSize.Width <= 0)
+                return;
+
+            const int left = 120;
+            const int right = 10;
+            const int gap = 6;
+            const int buttonWidth = 50;
+
+            var stopX = ClientSize.Width - right - buttonWidth;
+            var startX = stopX - gap - buttonWidth;
+
+            // Vertical layout (DPI/font-safe)
+            var streamY = cmbOsdColor.Bottom + 10;
+            txtStreamUrl.Top = streamY;
+            labelStreamUrl.Top = streamY + 3;
+            btnStreamStart.Top = streamY;
+            btnStreamStop.Top = streamY;
+            labelCodecValue.Top = streamY + 3;
+
+            var gstY = txtStreamUrl.Bottom + 10;
+            txtGStreamerSource.Top = gstY;
+            labelGStreamer.Top = gstY + 3;
+            btnGStreamerStart.Top = gstY;
+            btnGStreamerStop.Top = gstY;
+
+            btnStreamStart.Left = startX;
+            btnStreamStop.Left = stopX;
+            btnGStreamerStart.Left = startX;
+            btnGStreamerStop.Left = stopX;
+
+            var codecWidth = 110;
+            var codecX = startX - gap - codecWidth;
+            if (codecX < left + 150)
+            {
+                codecWidth = Math.Max(70, startX - gap - (left + 150));
+                codecX = startX - gap - codecWidth;
+            }
+
+            labelCodecValue.Left = codecX;
+            labelCodecValue.Width = Math.Max(70, codecWidth);
+
+            txtStreamUrl.Left = left;
+            txtStreamUrl.Width = Math.Max(150, codecX - gap - txtStreamUrl.Left);
+
+            txtGStreamerSource.Left = left;
+            txtGStreamerSource.Width = Math.Max(150, startX - gap - txtGStreamerSource.Left);
         }
 
         private void CmbVideoSources_Click(object sender, EventArgs e)
@@ -603,16 +660,6 @@ namespace MissionPlanner.Controls
                 return;
             }
 
-            if ((parsedUri.Scheme == Uri.UriSchemeHttp || parsedUri.Scheme == Uri.UriSchemeHttps) &&
-                IsHtmlPage(parsedUri.AbsoluteUri))
-            {
-                btnStreamStart.Enabled = true;
-                CustomMessageBox.Show(
-                    "This URL returns an HTML page, not a direct media stream.\nPlease provide a direct stream URL (rtsp/http media) or a raw GStreamer pipeline.",
-                    Strings.ERROR);
-                return;
-            }
-
             var pipeline = BuildPipelineFromUrl(parsedUri);
             txtGStreamerSource.Text = pipeline;
             Settings.Instance["video_stream_url"] = streamUrl;
@@ -657,29 +704,6 @@ namespace MissionPlanner.Controls
             }
 
             return $"uridecodebin uri=\"{location}\" ! queue max-size-buffers=1 leaky=2 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink sync=false";
-        }
-
-        private static bool IsHtmlPage(string url)
-        {
-            try
-            {
-                var request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "GET";
-                request.Timeout = 2500;
-                request.ReadWriteTimeout = 2500;
-                request.AllowAutoRedirect = true;
-                request.UserAgent = "MissionPlanner";
-
-                using (var response = (HttpWebResponse)request.GetResponse())
-                {
-                    var contentType = (response.ContentType ?? string.Empty).ToLowerInvariant();
-                    return contentType.Contains("text/html");
-                }
-            }
-            catch
-            {
-                return false;
-            }
         }
 
         private static string DetectCodec(string source)
