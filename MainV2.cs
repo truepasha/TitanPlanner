@@ -722,7 +722,7 @@ namespace MissionPlanner
                 toast.Show(this);
             };
 
-            MAVLinkInterface.gcssysid = (byte) Settings.Instance.GetByte("gcsid", MAVLinkInterface.gcssysid);
+            MAVLinkInterface.gcssysid = (byte) Settings.Instance.GetByte("gcsid", 210);
             UpdateGcsMavIdLabel();
 
             Form splash = Program.Splash;
@@ -2365,7 +2365,6 @@ namespace MissionPlanner
         /// needs to be true by default so that exits properly if no joystick used.
         /// </summary>
         volatile private bool joysendThreadExited = true;
-        private DateTime lastSatConditionSpeech = DateTime.MinValue;
 
         public void UpdateGcsMavIdLabel()
         {
@@ -2594,50 +2593,6 @@ namespace MissionPlanner
             joysendThreadExited = true; //so we know this thread exited.
         }
 
-        private void EvaluateSatCountSpeechCondition()
-        {
-            if (!speechEnabled() || MainV2.speechEngine == null || !MainV2.speechEngine.IsReady)
-                return;
-            if (!Settings.Instance.GetBoolean("speech_sat_condition_enabled", false))
-                return;
-            if (lastSatConditionSpeech.AddSeconds(5) > DateTime.UtcNow)
-                return;
-
-            var threshold = Settings.Instance.GetFloat("speech_sat_condition_value", 8);
-            var op = Settings.Instance.GetString("speech_sat_condition_op", "<");
-            var currentSat = MainV2.comPort.MAV.cs.satcount;
-
-            bool matched;
-            switch (op)
-            {
-                case "<":
-                    matched = currentSat < threshold;
-                    break;
-                case "<=":
-                    matched = currentSat <= threshold;
-                    break;
-                case "=":
-                    matched = Math.Abs(currentSat - threshold) < 0.01f;
-                    break;
-                case ">=":
-                    matched = currentSat >= threshold;
-                    break;
-                case ">":
-                    matched = currentSat > threshold;
-                    break;
-                default:
-                    matched = false;
-                    break;
-            }
-
-            if (!matched)
-                return;
-
-            var message = Settings.Instance.GetString("speech_sat_condition_message", "GPS satcount condition met. Current sats {satcount}");
-            MainV2.speechEngine.SpeakAsync(ArduPilot.Common.speechConversion(comPort.MAV, message));
-            lastSatConditionSpeech = DateTime.UtcNow;
-        }
-
         /// <summary>
         /// Used to fix the icon status for unexpected unplugs etc...
         /// </summary>
@@ -2844,8 +2799,6 @@ namespace MissionPlanner
 
                             speechcustomtime = DateTime.UtcNow;
                         }
-
-                        EvaluateSatCountSpeechCondition();
 
                         // speech for battery alerts
                         //speechbatteryvolt

@@ -77,8 +77,8 @@ namespace MissionPlanner
             this.MenuHelp,
             this.toolStripVehicleState,
             this.MenuConnect,
-            this.LBL_GcsMavId,
             this.toolStripConnectionControl,
+            this.LBL_GcsMavId,
             this.MenuArduPilot});
             this.MainMenu.Name = "MainMenu";
             this.MainMenu.ShowItemToolTips = true;
@@ -201,7 +201,7 @@ namespace MissionPlanner
             this.LBL_GcsMavId.Margin = new System.Windows.Forms.Padding(8, 0, 8, 0);
             this.LBL_GcsMavId.Name = "LBL_GcsMavId";
             this.LBL_GcsMavId.Size = new System.Drawing.Size(52, 28);
-            this.LBL_GcsMavId.Text = "GCS:255";
+            this.LBL_GcsMavId.Text = "GCS:---";
             // 
             // toolStripConnectionControl
             // 
