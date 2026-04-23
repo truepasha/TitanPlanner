@@ -531,19 +531,32 @@ namespace MissionPlanner.Joystick
             if (!Controls.Contains(cmbStickRate))
             {
                 lblStickRate.AutoSize = true;
-                lblStickRate.Location = new Point(CMB_joysticks.Left, CMB_joysticks.Bottom + 10);
                 lblStickRate.Name = "lblStickRate";
                 lblStickRate.Text = "Stick rate (CH1-4):";
                 Controls.Add(lblStickRate);
 
                 cmbStickRate.DropDownStyle = ComboBoxStyle.DropDownList;
                 cmbStickRate.FormattingEnabled = true;
-                cmbStickRate.Location = new Point(lblStickRate.Right + 8, lblStickRate.Top - 3);
                 cmbStickRate.Name = "cmbStickRate";
                 cmbStickRate.Size = new Size(160, 21);
                 cmbStickRate.SelectedIndexChanged += cmbStickRate_SelectedIndexChanged;
                 Controls.Add(cmbStickRate);
             }
+
+            var topControlsBottom = new[]
+            {
+                CMB_joysticks.Bottom,
+                BUT_enable.Bottom,
+                BUT_save.Bottom,
+                but_export.Bottom,
+                but_import.Bottom,
+                label14.Bottom,
+                chk_manualcontrol.Bottom,
+                CHK_elevons.Bottom
+            }.Max();
+
+            lblStickRate.Location = new Point(CMB_joysticks.Left, topControlsBottom + 8);
+            cmbStickRate.Location = new Point(lblStickRate.Right + 8, lblStickRate.Top - 3);
 
             cmbStickRate.Items.Clear();
             foreach (var rate in JoystickBase.SupportedStickRatesHz)
