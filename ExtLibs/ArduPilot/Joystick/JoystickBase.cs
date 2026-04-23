@@ -1033,8 +1033,8 @@ namespace MissionPlanner.Joystick
             {
                 try
                 {
-                    var joystickHz = Math.Max(20, Settings.Instance.GetInt32("joystick_rate_hz", 25));
-                    System.Threading.Thread.Sleep(Math.Max(1, 1000 / joystickHz));
+                    // Keep joystick sampling high and stable; MAVLink send cadence is controlled separately in MainV2.
+                    System.Threading.Thread.Sleep(2); // ~500Hz
                     //joystick stuff
                     state = GetCurrentState();
 

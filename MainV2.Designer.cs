@@ -200,9 +200,9 @@ namespace MissionPlanner
             // 
             this.LBL_GcsMavIdTitle.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.LBL_GcsMavIdTitle.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.LBL_GcsMavIdTitle.Margin = new System.Windows.Forms.Padding(8, -2, 4, 0);
+            this.LBL_GcsMavIdTitle.Margin = new System.Windows.Forms.Padding(8, 0, 4, 0);
             this.LBL_GcsMavIdTitle.Name = "LBL_GcsMavIdTitle";
-            this.LBL_GcsMavIdTitle.Size = new System.Drawing.Size(52, 28);
+            this.LBL_GcsMavIdTitle.Size = new System.Drawing.Size(56, 28);
             this.LBL_GcsMavIdTitle.Text = "GCS ID:";
             // 
             // TXT_GcsMavId
@@ -211,7 +211,7 @@ namespace MissionPlanner
             this.TXT_GcsMavId.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.TXT_GcsMavId.BackColor = System.Drawing.Color.White;
             this.TXT_GcsMavId.ForeColor = System.Drawing.Color.Black;
-            this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, -2, 8, 0);
+            this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, 0, 8, 0);
             this.TXT_GcsMavId.Name = "TXT_GcsMavId";
             this.TXT_GcsMavId.Size = new System.Drawing.Size(40, 28);
             // 

@@ -168,7 +168,6 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     child.MinimumSize = new Size(targetWidth, 0);
                     child.MaximumSize = new Size(targetWidth, 0);
                     child.Width = targetWidth;
-                    child.Height = child.PreferredSize.Height;
                 }
             }
         }
