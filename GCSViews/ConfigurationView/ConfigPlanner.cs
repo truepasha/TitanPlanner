@@ -640,10 +640,10 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             SetCheckboxFromConfig("Params_BG", CHK_params_bg);
             SetCheckboxFromConfig("SlowMachine", chk_slowMachine);
             SetCheckboxFromConfig("speech_armed_only", CHK_speechArmedOnly);
-            CMB_joystickHz.Text = Settings.Instance.GetInt32("joystick_rate_hz", 50).ToString();
+            CMB_joystickHz.Text = Settings.Instance.GetInt32("joystick_rate_hz", 25).ToString();
             if (string.IsNullOrEmpty(CMB_joystickHz.Text) || CMB_joystickHz.Items.IndexOf(CMB_joystickHz.Text) < 0)
             {
-                CMB_joystickHz.Text = "50";
+                CMB_joystickHz.Text = "25";
             }
             for (var i = 0; i < speechSeverityChecks.Length; i++)
             {

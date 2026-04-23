@@ -2383,7 +2383,7 @@ namespace MissionPlanner
         /// </summary>
         private async void joysticksend()
         {
-            var joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 50));
+            var joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 25));
             var rate = 1000f / joystickHz;
             int count = 0;
 
@@ -2526,7 +2526,7 @@ namespace MissionPlanner
                                     if (!comPort.BaseStream.IsOpen)
                                         continue;
 
-                                    if (comPort.BaseStream.BytesToWrite < 50)
+                                    if (comPort.BaseStream.BytesToWrite < 500)
                                     {
                                         if (sitl)
                                         {
@@ -2562,7 +2562,7 @@ namespace MissionPlanner
                                     if (!comPort.BaseStream.IsOpen)
                                         continue;
 
-                                    if (comPort.BaseStream.BytesToWrite < 50)
+                                    if (comPort.BaseStream.BytesToWrite < 500)
                                     {
                                         if (sitl)
                                         {
@@ -2581,7 +2581,7 @@ namespace MissionPlanner
                         }
                     }
 
-                    joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 50));
+                    joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 25));
                     rate = 1000f / joystickHz;
                     await Task.Delay(Math.Max(1, (int)(rate / 2))).ConfigureAwait(false);
                 }
