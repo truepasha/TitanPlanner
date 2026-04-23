@@ -3639,6 +3639,10 @@ namespace MissionPlanner
                     GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
+
+                    // Force immediate HUD present from the frame producer thread.
+                    // HUD.Refresh() in this codebase renders directly via CreateGraphics/OnPaint.
+                    GCSViews.FlightData.myhud.Refresh();
                 }
                 catch
                 {
@@ -3665,6 +3669,8 @@ namespace MissionPlanner
                     GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
+
+                    GCSViews.FlightData.myhud.Refresh();
                 }
                 catch
                 {
@@ -3691,6 +3697,8 @@ namespace MissionPlanner
                     GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
+
+                    GCSViews.FlightData.myhud.Refresh();
                 }
                 catch
                 {
