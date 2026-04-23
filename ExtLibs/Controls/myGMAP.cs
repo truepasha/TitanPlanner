@@ -23,7 +23,7 @@ namespace MissionPlanner.Controls
         string otherthread = "";
         int lastx = 0;
         int lasty = 0;
-        private long _lastDragMoveTick;
+        private uint _lastDragMoveTick;
         // Limit drag processing frequency to keep UI responsive for HUD/video rendering.
         private const int DragMoveThrottleMs = 15;
         public myGMAP()
@@ -148,8 +148,8 @@ namespace MissionPlanner.Controls
             {
                 if (Core.IsDragging)
                 {
-                    long nowTick = Environment.TickCount64;
-                    if (nowTick - _lastDragMoveTick < DragMoveThrottleMs)
+                    uint nowTick = unchecked((uint)Environment.TickCount);
+                    if (nowTick - _lastDragMoveTick < (uint)DragMoveThrottleMs)
                         return;
 
                     _lastDragMoveTick = nowTick;
