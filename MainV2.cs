@@ -2607,15 +2607,28 @@ namespace MissionPlanner
             var op = Settings.Instance.GetString("speech_sat_condition_op", "<");
             var currentSat = MainV2.comPort.MAV.cs.satcount;
 
-            var matched = op switch
+            bool matched;
+            switch (op)
             {
-                "<" => currentSat < threshold,
-                "<=" => currentSat <= threshold,
-                "=" => Math.Abs(currentSat - threshold) < 0.01f,
-                ">=" => currentSat >= threshold,
-                ">" => currentSat > threshold,
-                _ => false
-            };
+                case "<":
+                    matched = currentSat < threshold;
+                    break;
+                case "<=":
+                    matched = currentSat <= threshold;
+                    break;
+                case "=":
+                    matched = Math.Abs(currentSat - threshold) < 0.01f;
+                    break;
+                case ">=":
+                    matched = currentSat >= threshold;
+                    break;
+                case ">":
+                    matched = currentSat > threshold;
+                    break;
+                default:
+                    matched = false;
+                    break;
+            }
 
             if (!matched)
                 return;
