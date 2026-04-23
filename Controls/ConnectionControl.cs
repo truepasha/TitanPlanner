@@ -14,6 +14,8 @@ namespace MissionPlanner.Controls
             {
                 ShowLinkStats?.Invoke(this, EventArgs.Empty);
             };
+            Resize += (sender, args) => LayoutLinkStatsRow();
+            LayoutLinkStatsRow();
         }
 
         public event EventHandler ShowLinkStats;
@@ -46,6 +48,16 @@ namespace MissionPlanner.Controls
         private void ConnectionControl_MouseClick(object sender, MouseEventArgs e)
         {
 
+        }
+
+        private void LayoutLinkStatsRow()
+        {
+            cmb_sysid.Left = cmb_Connection.Left;
+            cmb_sysid.Width = Math.Max(120, Width - cmb_sysid.Left - 6);
+
+            linkLabel1.AutoSize = true;
+            linkLabel1.Left = Math.Max(0, cmb_sysid.Left - linkLabel1.PreferredWidth - 10);
+            linkLabel1.Top = cmb_sysid.Top + (cmb_sysid.Height - linkLabel1.Height) / 2;
         }
 
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
