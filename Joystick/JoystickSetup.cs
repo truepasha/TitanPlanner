@@ -23,6 +23,7 @@ namespace MissionPlanner.Joystick
         public JoystickSetup()
         {
             InitializeComponent();
+            Text = "USB Joystick settings";
 
             MissionPlanner.Utilities.Tracking.AddPage(this.GetType().ToString(), this.Text);
         }
@@ -543,20 +544,18 @@ namespace MissionPlanner.Joystick
                 Controls.Add(cmbStickRate);
             }
 
-            var topControlsBottom = new[]
-            {
-                CMB_joysticks.Bottom,
-                BUT_enable.Bottom,
-                BUT_save.Bottom,
-                but_export.Bottom,
-                but_import.Bottom,
-                label14.Bottom,
-                chk_manualcontrol.Bottom,
-                CHK_elevons.Bottom
-            }.Max();
-
-            lblStickRate.Location = new Point(CMB_joysticks.Left, topControlsBottom + 8);
+            var rateRowY = CMB_joysticks.Bottom + 10;
+            lblStickRate.Location = new Point(CMB_joysticks.Left, rateRowY + 3);
             cmbStickRate.Location = new Point(lblStickRate.Right + 8, lblStickRate.Top - 3);
+            chk_manualcontrol.Location = new Point(cmbStickRate.Right + 20, rateRowY + 1);
+            CHK_elevons.Location = new Point(chk_manualcontrol.Left, chk_manualcontrol.Bottom + 6);
+
+            var headerY = Math.Max(cmbStickRate.Bottom + 10, CHK_elevons.Bottom + 8);
+            label5.Location = new Point(label5.Left, headerY);
+            label6.Location = new Point(label6.Left, headerY);
+            label7.Location = new Point(label7.Left, headerY);
+            label8.Location = new Point(label8.Left, headerY);
+            label9.Location = new Point(label9.Left, headerY);
 
             cmbStickRate.Items.Clear();
             foreach (var rate in JoystickBase.SupportedStickRatesHz)

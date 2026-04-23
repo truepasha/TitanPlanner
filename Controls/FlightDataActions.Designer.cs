@@ -502,7 +502,7 @@ namespace MissionPlanner.Controls
             this.btnJoystick.Name = "btnJoystick";
             this.btnJoystick.Size = new System.Drawing.Size(163, 34);
             this.btnJoystick.TabIndex = 1;
-            this.btnJoystick.Text = "Joystick";
+            this.btnJoystick.Text = "USB Joystick";
             this.btnJoystick.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.btnJoystick.UseVisualStyleBackColor = true;
             // 
