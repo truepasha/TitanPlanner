@@ -51,6 +51,7 @@ namespace MissionPlanner
             this.toolStripVehicleState = new MissionPlanner.Controls.ToolStripVehicleState();
             this.MenuHelp = new System.Windows.Forms.ToolStripButton();
             this.MenuConnect = new System.Windows.Forms.ToolStripButton();
+            this.LBL_GcsMavId = new System.Windows.Forms.ToolStripLabel();
             this.toolStripConnectionControl = new MissionPlanner.Controls.ToolStripConnectionControl();
             this.MenuArduPilot = new System.Windows.Forms.ToolStripButton();
             this.menu = new MissionPlanner.Controls.MyButton();
@@ -76,6 +77,7 @@ namespace MissionPlanner
             this.MenuHelp,
             this.toolStripVehicleState,
             this.MenuConnect,
+            this.LBL_GcsMavId,
             this.toolStripConnectionControl,
             this.MenuArduPilot});
             this.MainMenu.Name = "MainMenu";
@@ -192,6 +194,15 @@ namespace MissionPlanner
             this.MenuConnect.Name = "MenuConnect";
             this.MenuConnect.Click += new System.EventHandler(this.MenuConnect_Click);
             // 
+            // LBL_GcsMavId
+            // 
+            this.LBL_GcsMavId.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.LBL_GcsMavId.ForeColor = System.Drawing.SystemColors.ControlLight;
+            this.LBL_GcsMavId.Margin = new System.Windows.Forms.Padding(8, 0, 8, 0);
+            this.LBL_GcsMavId.Name = "LBL_GcsMavId";
+            this.LBL_GcsMavId.Size = new System.Drawing.Size(52, 28);
+            this.LBL_GcsMavId.Text = "GCS:255";
+            // 
             // toolStripConnectionControl
             // 
             this.toolStripConnectionControl.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
@@ -261,6 +272,7 @@ namespace MissionPlanner
         public System.Windows.Forms.ToolStripButton MenuSimulation;
         public System.Windows.Forms.ToolStripButton MenuConfigTune;
         public System.Windows.Forms.ToolStripButton MenuConnect;
+        private System.Windows.Forms.ToolStripLabel LBL_GcsMavId;
         private Controls.ToolStripConnectionControl toolStripConnectionControl;
         private Controls.MyButton menu;
         public System.Windows.Forms.Panel panel1;

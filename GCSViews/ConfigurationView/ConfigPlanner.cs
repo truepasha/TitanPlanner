@@ -24,6 +24,12 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         static temp temp;
         private FlowLayoutPanel layoutRoot;
         private readonly CheckBox CHK_startFullscreen;
+        private readonly NumericUpDown NUM_joystickHz = new NumericUpDown();
+        private readonly CheckBox[] speechSeverityChecks = new CheckBox[8];
+        private readonly CheckBox CHK_speechSatCondition = new CheckBox();
+        private readonly ComboBox CMB_speechSatComparator = new ComboBox();
+        private readonly NumericUpDown NUM_speechSatThreshold = new NumericUpDown();
+        private readonly TextBox TXT_speechSatMessage = new TextBox();
 
         public ConfigPlanner()
         {
@@ -59,7 +65,51 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 Maps.GMapMarkerBase.InactiveDisplayStyleEnum.Normal.ToString()
             );
 
+            InitializeJoystickAndSpeechControls();
             BuildLayout();
+        }
+
+        private void InitializeJoystickAndSpeechControls()
+        {
+            NUM_joystickHz.Name = "NUM_joystickHz";
+            NUM_joystickHz.Minimum = 10;
+            NUM_joystickHz.Maximum = 200;
+            NUM_joystickHz.Value = 50;
+            NUM_joystickHz.Width = 80;
+            NUM_joystickHz.ValueChanged += NUM_joystickHz_ValueChanged;
+
+            for (var i = 0; i < speechSeverityChecks.Length; i++)
+            {
+                var sev = i;
+                speechSeverityChecks[i] = new CheckBox
+                {
+                    AutoSize = true,
+                    Text = $"Severity {sev}"
+                };
+                speechSeverityChecks[i].CheckedChanged += (sender, args) =>
+                {
+                    if (startup)
+                        return;
+                    Settings.Instance[$"speech_severity_{sev}"] = speechSeverityChecks[sev].Checked.ToString();
+                };
+            }
+
+            CHK_speechSatCondition.AutoSize = true;
+            CHK_speechSatCondition.Text = "SAT count condition";
+            CHK_speechSatCondition.CheckedChanged += CHK_speechSatCondition_CheckedChanged;
+
+            CMB_speechSatComparator.DropDownStyle = ComboBoxStyle.DropDownList;
+            CMB_speechSatComparator.Items.AddRange(new object[] { "<", "<=", "=", ">=", ">" });
+            CMB_speechSatComparator.SelectedIndex = 0;
+            CMB_speechSatComparator.SelectedIndexChanged += CMB_speechSatComparator_SelectedIndexChanged;
+
+            NUM_speechSatThreshold.Minimum = 0;
+            NUM_speechSatThreshold.Maximum = 100;
+            NUM_speechSatThreshold.Width = 70;
+            NUM_speechSatThreshold.ValueChanged += NUM_speechSatThreshold_ValueChanged;
+
+            TXT_speechSatMessage.Width = 280;
+            TXT_speechSatMessage.TextChanged += TXT_speechSatMessage_TextChanged;
         }
 
         private void BuildLayout()
@@ -257,9 +307,26 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             speechFlow.Controls.Add(CHK_speechadsb);
             table.Controls.Add(speechFlow, 0, 1);
 
+            var severityLabel = new Label { AutoSize = true, Text = "Speak STATUSTEXT severity:" };
+            table.Controls.Add(severityLabel, 0, 2);
+
+            var severityFlow = CreateWrapFlow();
+            foreach (var check in speechSeverityChecks)
+            {
+                severityFlow.Controls.Add(check);
+            }
+            table.Controls.Add(severityFlow, 0, 3);
+
+            var satFlow = CreateWrapFlow();
+            satFlow.Controls.Add(CHK_speechSatCondition);
+            satFlow.Controls.Add(CMB_speechSatComparator);
+            satFlow.Controls.Add(NUM_speechSatThreshold);
+            satFlow.Controls.Add(TXT_speechSatMessage);
+            table.Controls.Add(satFlow, 0, 4);
+
             var audioFlow = CreateWrapFlow();
             audioFlow.Controls.Add(BUT_Vario);
-            table.Controls.Add(audioFlow, 0, 2);
+            table.Controls.Add(audioFlow, 0, 5);
 
             group.Controls.Add(table);
             return group;
@@ -344,6 +411,10 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             table.Controls.Add(label33, 0, 4);
             table.Controls.Add(CMB_ratesensors, 1, 4);
+
+            var joystickRateLabel = new Label { AutoSize = true, Text = "Joystick Control (Hz)" };
+            table.Controls.Add(joystickRateLabel, 0, 5);
+            table.Controls.Add(NUM_joystickHz, 1, 5);
 
             group.Controls.Add(table);
             return group;
@@ -584,6 +655,18 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             SetCheckboxFromConfig("Params_BG", CHK_params_bg);
             SetCheckboxFromConfig("SlowMachine", chk_slowMachine);
             SetCheckboxFromConfig("speech_armed_only", CHK_speechArmedOnly);
+            NUM_joystickHz.Value = Math.Max(NUM_joystickHz.Minimum, Math.Min(NUM_joystickHz.Maximum, Settings.Instance.GetInt32("joystick_rate_hz", 50)));
+            for (var i = 0; i < speechSeverityChecks.Length; i++)
+            {
+                speechSeverityChecks[i].Checked = Settings.Instance.GetBoolean($"speech_severity_{i}", true);
+            }
+
+            CHK_speechSatCondition.Checked = Settings.Instance.GetBoolean("speech_sat_condition_enabled", false);
+            var satComparator = Settings.Instance.GetString("speech_sat_condition_op", "<");
+            if (CMB_speechSatComparator.Items.Contains(satComparator))
+                CMB_speechSatComparator.SelectedItem = satComparator;
+            NUM_speechSatThreshold.Value = Math.Max(NUM_speechSatThreshold.Minimum, Math.Min(NUM_speechSatThreshold.Maximum, Settings.Instance.GetInt32("speech_sat_condition_value", 8)));
+            TXT_speechSatMessage.Text = Settings.Instance.GetString("speech_sat_condition_message", "GPS satcount condition met. Current sats {satcount}");
 
             // this can't fail because it set at startup
             NUM_tracklength.Value = Settings.Instance.GetInt32("NUM_tracklength", 200);
@@ -1523,6 +1606,42 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             MAVLinkInterface.gcssysid = (byte)num_gcsid.Value;
             Settings.Instance["gcsid"] = num_gcsid.Value.ToString();
+            MainV2.instance?.UpdateGcsMavIdLabel();
+        }
+
+        private void NUM_joystickHz_ValueChanged(object sender, EventArgs e)
+        {
+            if (startup)
+                return;
+            Settings.Instance["joystick_rate_hz"] = NUM_joystickHz.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private void CHK_speechSatCondition_CheckedChanged(object sender, EventArgs e)
+        {
+            if (startup)
+                return;
+            Settings.Instance["speech_sat_condition_enabled"] = CHK_speechSatCondition.Checked.ToString();
+        }
+
+        private void CMB_speechSatComparator_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (startup)
+                return;
+            Settings.Instance["speech_sat_condition_op"] = CMB_speechSatComparator.Text;
+        }
+
+        private void NUM_speechSatThreshold_ValueChanged(object sender, EventArgs e)
+        {
+            if (startup)
+                return;
+            Settings.Instance["speech_sat_condition_value"] = NUM_speechSatThreshold.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private void TXT_speechSatMessage_TextChanged(object sender, EventArgs e)
+        {
+            if (startup)
+                return;
+            Settings.Instance["speech_sat_condition_message"] = TXT_speechSatMessage.Text;
         }
 
         private void CHK_params_bg_CheckedChanged(object sender, EventArgs e)

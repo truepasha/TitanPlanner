@@ -723,6 +723,7 @@ namespace MissionPlanner
             };
 
             MAVLinkInterface.gcssysid = (byte) Settings.Instance.GetByte("gcsid", MAVLinkInterface.gcssysid);
+            UpdateGcsMavIdLabel();
 
             Form splash = Program.Splash;
 
@@ -2364,13 +2365,27 @@ namespace MissionPlanner
         /// needs to be true by default so that exits properly if no joystick used.
         /// </summary>
         volatile private bool joysendThreadExited = true;
+        private DateTime lastSatConditionSpeech = DateTime.MinValue;
+
+        public void UpdateGcsMavIdLabel()
+        {
+            if (LBL_GcsMavId == null)
+                return;
+
+            var text = $"GCS:{MAVLinkInterface.gcssysid}";
+            if (InvokeRequired)
+                BeginInvoke((Action)delegate { LBL_GcsMavId.Text = text; });
+            else
+                LBL_GcsMavId.Text = text;
+        }
 
         /// <summary>
         /// thread used to send joystick packets to the MAV
         /// </summary>
         private async void joysticksend()
         {
-            float rate = 50; // 1000 / 50 = 20 hz
+            var joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 50));
+            var rate = 1000f / joystickHz;
             int count = 0;
 
             DateTime lastratechange = DateTime.Now;
@@ -2567,7 +2582,9 @@ namespace MissionPlanner
                         }
                     }
 
-                    await Task.Delay(40).ConfigureAwait(false);
+                    joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 50));
+                    rate = 1000f / joystickHz;
+                    await Task.Delay(Math.Max(1, (int)(rate / 2))).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -2575,6 +2592,37 @@ namespace MissionPlanner
             }
 
             joysendThreadExited = true; //so we know this thread exited.
+        }
+
+        private void EvaluateSatCountSpeechCondition()
+        {
+            if (!speechEnabled() || MainV2.speechEngine == null || !MainV2.speechEngine.IsReady)
+                return;
+            if (!Settings.Instance.GetBoolean("speech_sat_condition_enabled", false))
+                return;
+            if (lastSatConditionSpeech.AddSeconds(5) > DateTime.UtcNow)
+                return;
+
+            var threshold = Settings.Instance.GetFloat("speech_sat_condition_value", 8);
+            var op = Settings.Instance.GetString("speech_sat_condition_op", "<");
+            var currentSat = MainV2.comPort.MAV.cs.satcount;
+
+            var matched = op switch
+            {
+                "<" => currentSat < threshold,
+                "<=" => currentSat <= threshold,
+                "=" => Math.Abs(currentSat - threshold) < 0.01f,
+                ">=" => currentSat >= threshold,
+                ">" => currentSat > threshold,
+                _ => false
+            };
+
+            if (!matched)
+                return;
+
+            var message = Settings.Instance.GetString("speech_sat_condition_message", "GPS satcount condition met. Current sats {satcount}");
+            MainV2.speechEngine.SpeakAsync(ArduPilot.Common.speechConversion(comPort.MAV, message));
+            lastSatConditionSpeech = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -2783,6 +2831,8 @@ namespace MissionPlanner
 
                             speechcustomtime = DateTime.UtcNow;
                         }
+
+                        EvaluateSatCountSpeechCondition();
 
                         // speech for battery alerts
                         //speechbatteryvolt
