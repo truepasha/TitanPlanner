@@ -22,7 +22,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         private List<CultureInfo> _languages;
         private bool startup;
         static temp temp;
-        private FlowLayoutPanel layoutRoot;
+        private TableLayoutPanel layoutRoot;
         private readonly CheckBox CHK_startFullscreen;
         private readonly ComboBox CMB_joystickHz = new ComboBox();
         private readonly CheckBox[] speechSeverityChecks = new CheckBox[8];
@@ -99,26 +99,40 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             SuspendLayout();
 
-            layoutRoot = new FlowLayoutPanel
+            layoutRoot = new TableLayoutPanel
             {
                 Name = "layoutRoot",
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
                 Padding = new Padding(10),
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                ColumnCount = 2,
+                RowCount = 4
             };
+            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layoutRoot.SizeChanged += (s, e) => ResizeGroupBoxes();
 
-            layoutRoot.Controls.Add(CreateConnectivityGroup());
-            layoutRoot.Controls.Add(CreateLayoutAndAppearanceGroup());
-            layoutRoot.Controls.Add(CreateMapAndDisplayGroup());
-            layoutRoot.Controls.Add(CreateTelemetryGroup());
-            layoutRoot.Controls.Add(CreateUnitsGroup());
-            layoutRoot.Controls.Add(CreateSpeechAndAudioGroup());
-            layoutRoot.Controls.Add(CreateUpdatesGroup());
-            layoutRoot.Controls.Add(CreateConfigurationGroup());
+            var grpConnectivity = CreateConnectivityGroup();
+            var grpTelemetry = CreateTelemetryGroup();
+            var grpMap = CreateMapAndDisplayGroup();
+            var grpLayout = CreateLayoutAndAppearanceGroup();
+            var grpUnits = CreateUnitsGroup();
+            var grpConfiguration = CreateConfigurationGroup();
+            var grpSpeech = CreateSpeechAndAudioGroup();
+
+            layoutRoot.Controls.Add(grpConnectivity, 0, 0);
+            layoutRoot.Controls.Add(grpTelemetry, 1, 0);
+            layoutRoot.Controls.Add(grpMap, 0, 1);
+            layoutRoot.Controls.Add(grpLayout, 1, 1);
+            layoutRoot.Controls.Add(grpUnits, 0, 2);
+            layoutRoot.Controls.Add(grpConfiguration, 1, 2);
+            layoutRoot.Controls.Add(grpSpeech, 0, 3);
+            layoutRoot.SetColumnSpan(grpSpeech, 2);
 
             Controls.Clear();
             Controls.Add(layoutRoot);
@@ -136,15 +150,13 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
 
             var width = layoutRoot.ClientSize.Width - layoutRoot.Padding.Horizontal;
-            var minGroupWidth = 320;
-            var columns = Math.Max(1, Math.Min(3, width / minGroupWidth));
-            var columnWidth = columns > 0 ? (width - ((columns - 1) * 10)) / columns : width;
+            var columnWidth = Math.Max(280, (width - 20) / 2);
 
             foreach (Control child in layoutRoot.Controls)
             {
                 if (width > 0)
                 {
-                    child.Width = Math.Max(280, Math.Min(columnWidth, width));
+                    child.Width = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Max(560, width - 10) : columnWidth;
                 }
             }
         }
