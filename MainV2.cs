@@ -503,8 +503,8 @@ namespace MissionPlanner
         /// <summary>
         /// track last joystick packet sent. used to control rate
         /// </summary>
-        DateTime lastjoystick = DateTime.Now;
-        DateTime lastjoystickAux = DateTime.Now;
+        long lastjoystickTick = Stopwatch.GetTimestamp();
+        long lastjoystickAuxTick = Stopwatch.GetTimestamp();
 
         /// <summary>
         /// determine if we are running sitl
@@ -2366,7 +2366,15 @@ namespace MissionPlanner
         /// <summary>
         /// thread used to send joystick packets to the MAV
         /// </summary>
-        private async void joysticksend()
+        private void joysticksend()
+        {
+            if (joystickthreadrun)
+                return;
+
+            Task.Factory.StartNew(joysticksendloop, TaskCreationOptions.LongRunning);
+        }
+
+        private void joysticksendloop()
         {
             int fastRateHz = Joystick.JoystickBase.GetConfiguredPollRateHz();
             int fastRateMs = Math.Max(1, (int)Math.Round(1000.0 / fastRateHz));
@@ -2397,9 +2405,9 @@ namespace MissionPlanner
                         {
                             fastRateHz = Joystick.JoystickBase.GetConfiguredPollRateHz();
                             fastRateMs = Math.Max(1, (int)Math.Round(1000.0 / fastRateHz));
-                            var now = DateTime.Now;
-                            bool sendFastFrame = lastjoystick.AddMilliseconds(fastRateMs) < now;
-                            bool sendAuxFrame = lastjoystickAux.AddMilliseconds(auxRateMs) < now;
+                            var nowTick = Stopwatch.GetTimestamp();
+                            bool sendFastFrame = (nowTick - lastjoystickTick) * 1000.0 / Stopwatch.Frequency >= fastRateMs;
+                            bool sendAuxFrame = (nowTick - lastjoystickAuxTick) * 1000.0 / Stopwatch.Frequency >= auxRateMs;
 
                             if (!joystick.manual_control)
                             {
@@ -2530,9 +2538,9 @@ namespace MissionPlanner
                                         }
 
                                         count++;
-                                        lastjoystick = now;
+                                        lastjoystickTick = nowTick;
                                         if (sendAuxFrame)
-                                            lastjoystickAux = now;
+                                            lastjoystickAuxTick = nowTick;
                                     }
                                 }
                             }
@@ -2568,7 +2576,7 @@ namespace MissionPlanner
                                         }
 
                                         count++;
-                                        lastjoystick = now;
+                                        lastjoystickTick = nowTick;
                                     }
                                 }
                             }
@@ -2577,18 +2585,18 @@ namespace MissionPlanner
 
                     if (fastRateMs <= 10)
                     {
-                        // stay off UI synchronization context in high-rate loop
-                        await Task.Delay(1).ConfigureAwait(false);
+                        Thread.Sleep(0);
+                        Thread.SpinWait(100);
                     }
                     else
                     {
                         var loopDelayMs = Math.Max(1, Math.Min(5, fastRateMs / 4));
-                        await Task.Delay(loopDelayMs).ConfigureAwait(false);
+                        Thread.Sleep(loopDelayMs);
                     }
                 }
                 catch
                 {
-                    await Task.Delay(1).ConfigureAwait(false);
+                    Thread.Sleep(1);
                 } // cant fall out
             }
 

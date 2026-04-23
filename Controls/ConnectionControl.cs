@@ -52,13 +52,19 @@ namespace MissionPlanner.Controls
 
         private void LayoutLinkStatsRow()
         {
-            cmb_sysid.Left = cmb_Connection.Left;
-            cmb_sysid.Width = Math.Max(120, Width - cmb_sysid.Left - 6);
-
             linkLabel1.AutoSize = true;
             var linkWidth = linkLabel1.GetPreferredSize(Size.Empty).Width;
-            linkLabel1.Left = Math.Max(0, cmb_sysid.Left - linkWidth - 10);
+
+            var rowLeft = cmb_Connection.Left;
+            var rowRight = Width - 6;
+
+            linkLabel1.Left = rowLeft;
             linkLabel1.Top = cmb_sysid.Top + (cmb_sysid.Height - linkLabel1.Height) / 2;
+
+            var sysLeft = linkLabel1.Right + 10;
+            var fullWidth = Math.Max(120, rowRight - sysLeft);
+            cmb_sysid.Left = sysLeft;
+            cmb_sysid.Width = Math.Max(120, (int)(fullWidth * 0.75)); // requested: reduce width by 25%
         }
 
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
