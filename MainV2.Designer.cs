@@ -209,7 +209,8 @@ namespace MissionPlanner
             // 
             this.TXT_GcsMavId.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.TXT_GcsMavId.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.TXT_GcsMavId.ForeColor = System.Drawing.Color.Black;
+            this.TXT_GcsMavId.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
+            this.TXT_GcsMavId.ForeColor = System.Drawing.Color.White;
             this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, 0, 8, 0);
             this.TXT_GcsMavId.Name = "TXT_GcsMavId";
             this.TXT_GcsMavId.Size = new System.Drawing.Size(36, 28);

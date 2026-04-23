@@ -1033,7 +1033,8 @@ namespace MissionPlanner.Joystick
             {
                 try
                 {
-                    System.Threading.Thread.Sleep(50);
+                    var joystickHz = Math.Max(20, Settings.Instance.GetInt32("joystick_rate_hz", 25));
+                    System.Threading.Thread.Sleep(Math.Max(1, 1000 / joystickHz));
                     //joystick stuff
                     state = GetCurrentState();
 

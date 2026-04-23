@@ -150,13 +150,13 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
 
             var width = layoutRoot.ClientSize.Width - layoutRoot.Padding.Horizontal;
-            var columnWidth = Math.Max(280, (width - 20) / 2);
+            var columnWidth = Math.Min(560, Math.Max(280, (width - 20) / 2));
 
             foreach (Control child in layoutRoot.Controls)
             {
                 if (width > 0)
                 {
-                    var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Max(560, width - 10) : columnWidth;
+                    var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Min(1140, Math.Max(560, width - 10)) : columnWidth;
                     child.MinimumSize = new Size(targetWidth, 0);
                     child.MaximumSize = new Size(targetWidth, 0);
                     child.Width = targetWidth;
@@ -391,21 +391,26 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             var table = CreateTableLayout(2);
 
             table.Controls.Add(label102, 0, 0);
+            label102.Text = "Attitude (Hz)";
             table.Controls.Add(CMB_rateattitude, 1, 0);
 
             table.Controls.Add(label103, 0, 1);
+            label103.Text = "Position (Hz)";
             table.Controls.Add(CMB_rateposition, 1, 1);
 
             table.Controls.Add(label104, 0, 2);
+            label104.Text = "Mode/Status (Hz)";
             table.Controls.Add(CMB_ratestatus, 1, 2);
 
             table.Controls.Add(label107, 0, 3);
+            label107.Text = "RC (Hz)";
             table.Controls.Add(CMB_raterc, 1, 3);
 
             table.Controls.Add(label33, 0, 4);
+            label33.Text = "Sensor (Hz)";
             table.Controls.Add(CMB_ratesensors, 1, 4);
 
-            var joystickRateLabel = new Label { AutoSize = true, Text = "USB Joystick" };
+            var joystickRateLabel = new Label { AutoSize = true, Text = "USB Joystick (Hz)" };
             table.Controls.Add(joystickRateLabel, 0, 5);
             table.Controls.Add(CMB_joystickHz, 1, 5);
 
