@@ -743,6 +743,7 @@ namespace MissionPlanner
             }
 
             InitializeComponent();
+            TXT_GcsMavId.Enter += (s, e) => gcsIdEditing = true;
             TXT_GcsMavId.Leave += (s, e) => ApplyToolbarGcsIdFromInput();
             TXT_GcsMavId.KeyDown += (s, e) =>
             {
@@ -2375,10 +2376,13 @@ namespace MissionPlanner
         /// needs to be true by default so that exits properly if no joystick used.
         /// </summary>
         volatile private bool joysendThreadExited = true;
+        private volatile bool gcsIdEditing = false;
 
         public void UpdateGcsMavIdLabel()
         {
             if (TXT_GcsMavId == null)
+                return;
+            if (gcsIdEditing)
                 return;
 
             var text = MAVLinkInterface.gcssysid.ToString(CultureInfo.InvariantCulture);
@@ -2399,6 +2403,7 @@ namespace MissionPlanner
                 Settings.Instance["gcsid"] = gcsId.ToString(CultureInfo.InvariantCulture);
             }
 
+            gcsIdEditing = false;
             UpdateGcsMavIdLabel();
         }
 
@@ -2410,6 +2415,9 @@ namespace MissionPlanner
             var joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 25));
             var rate = 1000f / joystickHz;
             int count = 0;
+            var sendClock = Stopwatch.StartNew();
+            double nextStickDueMs = 0;
+            double nextAuxDueMs = 0;
 
             DateTime lastratechange = DateTime.Now;
 
@@ -2515,9 +2523,9 @@ namespace MissionPlanner
                                 if (joystick.getJoystickAxis(18) != Joystick.joystickaxis.None)
                                     rc.chan18_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech18;
 
-                                var now = DateTime.Now;
-                                var sticksDue = lastjoystick.AddMilliseconds(rate) < now;
-                                var auxDue = lastjoystickAux.AddMilliseconds(50) < now; // legacy MP rate for aux channels
+                                var nowMs = sendClock.Elapsed.TotalMilliseconds;
+                                var sticksDue = nowMs >= nextStickDueMs;
+                                var auxDue = nowMs >= nextAuxDueMs; // legacy MP cadence for aux channels
 
                                 if (sticksDue || auxDue)
                                 {
@@ -2590,14 +2598,17 @@ namespace MissionPlanner
                                                 rcSticks.chan18_raw = ushort.MaxValue;
                                                 comPort.sendPacket(rcSticks, rcSticks.target_system, rcSticks.target_component);
                                             }
-                                            lastjoystick = now;
+                                            lastjoystick = DateTime.Now;
+                                            nextStickDueMs = nowMs + rate;
                                         }
 
                                         if (auxDue && (isUdpLink || comPort.BaseStream.BytesToWrite < 500))
                                         {
                                             comPort.sendPacket(rc, rc.target_system, rc.target_component);
-                                            lastjoystickAux = now;
+                                            lastjoystickAux = DateTime.Now;
                                         }
+                                        if (auxDue)
+                                            nextAuxDueMs = nowMs + 50;
                                     }
 
                                     count++;
@@ -2618,7 +2629,8 @@ namespace MissionPlanner
                                 if (joystick.getJoystickAxis(4) != Joystick.joystickaxis.None)
                                     rc.r = MainV2.comPort.MAV.cs.rcoverridech4;
 
-                                if (lastjoystick.AddMilliseconds(rate) < DateTime.Now)
+                                var nowMs = sendClock.Elapsed.TotalMilliseconds;
+                                if (nowMs >= nextStickDueMs)
                                 {
                                     if (!comPort.BaseStream.IsOpen)
                                         continue;
@@ -2636,6 +2648,7 @@ namespace MissionPlanner
 
                                         count++;
                                         lastjoystick = DateTime.Now;
+                                        nextStickDueMs = nowMs + rate;
                                     }
                                 }
                             }
