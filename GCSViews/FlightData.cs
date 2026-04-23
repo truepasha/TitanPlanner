@@ -420,6 +420,7 @@ namespace MissionPlanner.GCSViews
         DateTime lastmapposchange = DateTime.MinValue;
         DateTime _lastMapUserInteractionUtc = DateTime.MinValue;
         static readonly TimeSpan MapInteractionThrottleWindow = TimeSpan.FromMilliseconds(350);
+        bool _mapInteractionRenderModeActive = false;
 
         DateTime lastscreenupdate = DateTime.UtcNow;
         RollingPointPairList list1 = new RollingPointPairList(1200);
@@ -4925,6 +4926,10 @@ namespace MissionPlanner.GCSViews
                             tracklast = DateTime.Now;
                             continue;
                         }
+                        else
+                        {
+                            SetMapInteractionRenderMode(false);
+                        }
 
                         // update programed wp course
                         if (waypoints.AddSeconds(5) < DateTime.Now)
@@ -7588,6 +7593,7 @@ namespace MissionPlanner.GCSViews
         private void MarkMapUserInteraction()
         {
             _lastMapUserInteractionUtc = DateTime.UtcNow;
+            SetMapInteractionRenderMode(true);
         }
 
         private bool IsMapUserInteractionActive()
@@ -7596,6 +7602,25 @@ namespace MissionPlanner.GCSViews
                 return true;
 
             return (DateTime.UtcNow - _lastMapUserInteractionUtc) < MapInteractionThrottleWindow;
+        }
+
+        private void SetMapInteractionRenderMode(bool active)
+        {
+            if (_mapInteractionRenderModeActive == active)
+                return;
+
+            _mapInteractionRenderModeActive = active;
+
+            this.BeginInvokeIfRequired(() =>
+            {
+                if (gMapControl1 == null || gMapControl1.IsDisposed)
+                    return;
+
+                // During active pan/zoom render only tiles.
+                gMapControl1.MarkersEnabled = !active;
+                gMapControl1.RoutesEnabled = !active;
+                gMapControl1.PolygonsEnabled = !active;
+            });
         }
 
         private void setBatteryCellCountToolStripMenuItem_Click(object sender, EventArgs e)
