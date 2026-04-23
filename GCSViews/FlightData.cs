@@ -392,6 +392,13 @@ namespace MissionPlanner.GCSViews
 
         internal PointLatLng MouseDownStart;
         internal Point MouseDownStartLocal;
+        private bool _mapDragInProgress;
+        private bool _mapDragMoved;
+        private int _mapDragAccumDx;
+        private int _mapDragAccumDy;
+        private uint _lastMapDragUpdateTick;
+        private const int MapDragUpdateMs = 20;
+        private const int MapDragMoveThresholdPx = 3;
 
         //The file path of the selected script
         internal string selectedscript = "";
@@ -897,6 +904,7 @@ namespace MissionPlanner.GCSViews
             gMapControl1.MinZoom = 4;
             gMapControl1.MaxZoom = 24;
             gMapControl1.Zoom = 3;
+            gMapControl1.CanDragMap = false;
 
             gMapControl1.OnMapZoomChanged += gMapControl1_OnMapZoomChanged;
 
@@ -4118,6 +4126,12 @@ namespace MissionPlanner.GCSViews
             MouseDownStartLocal = e.Location;
             Console.WriteLine("gMapControl1_MouseDown "+ MouseDownStart);
 
+            _mapDragInProgress = (e.Button == MouseButtons.Left || e.Button == MouseButtons.Right);
+            _mapDragMoved = false;
+            _mapDragAccumDx = 0;
+            _mapDragAccumDy = 0;
+            _lastMapDragUpdateTick = 0;
+
             if (ModifierKeys == Keys.Control)
             {
                 goHereToolStripMenuItem_Click(null, null);
@@ -4152,28 +4166,47 @@ namespace MissionPlanner.GCSViews
 
         private void gMapControl1_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (_mapDragInProgress && (e.Button == MouseButtons.Left || e.Button == MouseButtons.Right))
             {
-                // incremental delta avoids direction lock near pole/singularity regions
                 int dx = e.X - MouseDownStartLocal.X;
                 int dy = e.Y - MouseDownStartLocal.Y;
 
                 if (dx == 0 && dy == 0)
                     return;
 
-                double absLat = Math.Abs(gMapControl1.Position.Lat);
+                _mapDragAccumDx += dx;
+                _mapDragAccumDy += dy;
+
+                if (!_mapDragMoved &&
+                    (Math.Abs(_mapDragAccumDx) > MapDragMoveThresholdPx || Math.Abs(_mapDragAccumDy) > MapDragMoveThresholdPx))
+                {
+                    _mapDragMoved = true;
+                }
+
+                MouseDownStartLocal = e.Location;
+
+                if (!_mapDragMoved)
+                    return;
+
+                uint nowTick = unchecked((uint)Environment.TickCount);
+                if (_lastMapDragUpdateTick != 0 && nowTick - _lastMapDragUpdateTick < (uint)MapDragUpdateMs)
+                    return;
+
+                var applyDx = _mapDragAccumDx;
+                var applyDy = _mapDragAccumDy;
+                _mapDragAccumDx = 0;
+                _mapDragAccumDy = 0;
+                _lastMapDragUpdateTick = nowTick;
+
                 PointLatLng newCenter = gMapControl1.FromLocalToLatLng(
-                    gMapControl1.Width / 2 - dx,
-                    gMapControl1.Height / 2 - dy);
+                    gMapControl1.Width / 2 - applyDx,
+                    gMapControl1.Height / 2 - applyDy);
 
                 if (!double.IsNaN(newCenter.Lat) && !double.IsNaN(newCenter.Lng) &&
                     !double.IsInfinity(newCenter.Lat) && !double.IsInfinity(newCenter.Lng))
                 {
                     gMapControl1.Position = newCenter;
                 }
-
-                // consume this step (critical for stable drag)
-                MouseDownStartLocal = e.Location;
             }
             else
             {
@@ -7543,7 +7576,26 @@ namespace MissionPlanner.GCSViews
             var MouseDownEnd = gMapControl1.FromLocalToLatLng(e.X, e.Y);
             Console.WriteLine("gMapControl1_MouseUp "+ MouseDownEnd);
 
-            if (gMapControl1.Core.IsDragging)
+            if (_mapDragInProgress && _mapDragMoved && (_mapDragAccumDx != 0 || _mapDragAccumDy != 0))
+            {
+                PointLatLng newCenter = gMapControl1.FromLocalToLatLng(
+                    gMapControl1.Width / 2 - _mapDragAccumDx,
+                    gMapControl1.Height / 2 - _mapDragAccumDy);
+
+                if (!double.IsNaN(newCenter.Lat) && !double.IsNaN(newCenter.Lng) &&
+                    !double.IsInfinity(newCenter.Lat) && !double.IsInfinity(newCenter.Lng))
+                {
+                    gMapControl1.Position = newCenter;
+                }
+            }
+
+            bool consumedDrag = _mapDragMoved;
+            _mapDragInProgress = false;
+            _mapDragMoved = false;
+            _mapDragAccumDx = 0;
+            _mapDragAccumDy = 0;
+
+            if (consumedDrag || gMapControl1.Core.IsDragging)
                 return;
 
             if (CurrentGMapMarker != null && CurrentGMapMarker.Tag is MAVState && MouseDownStart == MouseDownEnd && Settings.Instance.GetBoolean("ClickSwapMAV", false))
