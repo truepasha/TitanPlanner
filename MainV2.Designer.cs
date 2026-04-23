@@ -79,8 +79,8 @@ namespace MissionPlanner
             this.toolStripVehicleState,
             this.MenuConnect,
             this.toolStripConnectionControl,
-            this.TXT_GcsMavId,
             this.LBL_GcsMavIdTitle,
+            this.TXT_GcsMavId,
             this.MenuArduPilot});
             this.MainMenu.Name = "MainMenu";
             this.MainMenu.ShowItemToolTips = true;
@@ -200,7 +200,7 @@ namespace MissionPlanner
             // 
             this.LBL_GcsMavIdTitle.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.LBL_GcsMavIdTitle.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.LBL_GcsMavIdTitle.Margin = new System.Windows.Forms.Padding(8, -4, 4, 0);
+            this.LBL_GcsMavIdTitle.Margin = new System.Windows.Forms.Padding(8, -8, 4, 0);
             this.LBL_GcsMavIdTitle.Name = "LBL_GcsMavIdTitle";
             this.LBL_GcsMavIdTitle.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.LBL_GcsMavIdTitle.Size = new System.Drawing.Size(56, 28);
@@ -212,7 +212,7 @@ namespace MissionPlanner
             this.TXT_GcsMavId.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.TXT_GcsMavId.BackColor = System.Drawing.Color.White;
             this.TXT_GcsMavId.ForeColor = System.Drawing.Color.Black;
-            this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, -4, 8, 0);
+            this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, -8, 8, 0);
             this.TXT_GcsMavId.Name = "TXT_GcsMavId";
             this.TXT_GcsMavId.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
             this.TXT_GcsMavId.Size = new System.Drawing.Size(40, 28);
