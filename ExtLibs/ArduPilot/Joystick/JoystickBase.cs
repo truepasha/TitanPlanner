@@ -1076,7 +1076,7 @@ namespace MissionPlanner.Joystick
                     if (Stopwatch.GetTimestamp() - nextTick > intervalTicks * 4)
                         nextTick = Stopwatch.GetTimestamp();
                     nextTick += intervalTicks;
-                    WaitUntil(nextTick);
+                    WaitUntil(nextTick, intervalTicks);
                     //joystick stuff
                     state = GetCurrentState();
 
@@ -1189,8 +1189,12 @@ namespace MissionPlanner.Joystick
             }
         }
 
-        private static void WaitUntil(long targetTick)
+        private static void WaitUntil(long targetTick, long intervalTicks)
         {
+            // For high rates (e.g. 100/200Hz), Thread.Sleep(1) can be quantized by OS timer
+            // and collapse effective rate to ~62.5Hz. Use yield/spin in that regime.
+            bool highRate = intervalTicks <= (Stopwatch.Frequency / 120);
+
             while (true)
             {
                 var now = Stopwatch.GetTimestamp();
@@ -1198,15 +1202,18 @@ namespace MissionPlanner.Joystick
                 if (remainingTicks <= 0)
                     return;
 
-                var remainingMs = remainingTicks * 1000.0 / Stopwatch.Frequency;
-                if (remainingMs > 2)
+                if (!highRate)
                 {
-                    Thread.Sleep(1);
+                    var remainingMs = remainingTicks * 1000.0 / Stopwatch.Frequency;
+                    if (remainingMs > 2)
+                    {
+                        Thread.Sleep(1);
+                        continue;
+                    }
                 }
-                else
-                {
-                    Thread.SpinWait(100);
-                }
+
+                Thread.Yield();
+                Thread.SpinWait(100);
             }
         }
 

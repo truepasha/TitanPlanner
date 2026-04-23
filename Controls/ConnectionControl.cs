@@ -56,7 +56,8 @@ namespace MissionPlanner.Controls
             cmb_sysid.Width = Math.Max(120, Width - cmb_sysid.Left - 6);
 
             linkLabel1.AutoSize = true;
-            linkLabel1.Left = Math.Max(0, cmb_sysid.Left - linkLabel1.PreferredWidth - 10);
+            var linkWidth = linkLabel1.GetPreferredSize(Size.Empty).Width;
+            linkLabel1.Left = Math.Max(0, cmb_sysid.Left - linkWidth - 10);
             linkLabel1.Top = cmb_sysid.Top + (cmb_sysid.Height - linkLabel1.Height) / 2;
         }
 
