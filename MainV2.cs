@@ -504,6 +504,7 @@ namespace MissionPlanner
         /// track last joystick packet sent. used to control rate
         /// </summary>
         DateTime lastjoystick = DateTime.Now;
+        DateTime lastjoystickAux = DateTime.Now;
 
         /// <summary>
         /// determine if we are running sitl
@@ -2491,7 +2492,11 @@ namespace MissionPlanner
                                 if (joystick.getJoystickAxis(18) != Joystick.joystickaxis.None)
                                     rc.chan18_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech18;
 
-                                if (lastjoystick.AddMilliseconds(rate) < DateTime.Now)
+                                var now = DateTime.Now;
+                                var sticksDue = lastjoystick.AddMilliseconds(rate) < now;
+                                var auxDue = lastjoystickAux.AddMilliseconds(50) < now; // legacy MP rate for aux channels
+
+                                if (sticksDue || auxDue)
                                 {
                                     /*
                                 if (MainV2.comPort.MAV.cs.rssi > 0 && MainV2.comPort.MAV.cs.remrssi > 0)
@@ -2534,11 +2539,41 @@ namespace MissionPlanner
                                         }
                                         else
                                         {
-                                            comPort.sendPacket(rc, rc.target_system, rc.target_component);
+                                            if (sticksDue)
+                                            {
+                                                MAVLink.mavlink_rc_channels_override_t rcSticks = new MAVLink.mavlink_rc_channels_override_t();
+                                                rcSticks.target_component = rc.target_component;
+                                                rcSticks.target_system = rc.target_system;
+                                                rcSticks.chan1_raw = rc.chan1_raw;
+                                                rcSticks.chan2_raw = rc.chan2_raw;
+                                                rcSticks.chan3_raw = rc.chan3_raw;
+                                                rcSticks.chan4_raw = rc.chan4_raw;
+                                                rcSticks.chan5_raw = ushort.MaxValue;
+                                                rcSticks.chan6_raw = ushort.MaxValue;
+                                                rcSticks.chan7_raw = ushort.MaxValue;
+                                                rcSticks.chan8_raw = ushort.MaxValue;
+                                                rcSticks.chan9_raw = ushort.MaxValue;
+                                                rcSticks.chan10_raw = ushort.MaxValue;
+                                                rcSticks.chan11_raw = ushort.MaxValue;
+                                                rcSticks.chan12_raw = ushort.MaxValue;
+                                                rcSticks.chan13_raw = ushort.MaxValue;
+                                                rcSticks.chan14_raw = ushort.MaxValue;
+                                                rcSticks.chan15_raw = ushort.MaxValue;
+                                                rcSticks.chan16_raw = ushort.MaxValue;
+                                                rcSticks.chan17_raw = ushort.MaxValue;
+                                                rcSticks.chan18_raw = ushort.MaxValue;
+                                                comPort.sendPacket(rcSticks, rcSticks.target_system, rcSticks.target_component);
+                                                lastjoystick = now;
+                                            }
+
+                                            if (auxDue)
+                                            {
+                                                comPort.sendPacket(rc, rc.target_system, rc.target_component);
+                                                lastjoystickAux = now;
+                                            }
                                         }
 
                                         count++;
-                                        lastjoystick = DateTime.Now;
                                     }
                                 }
                             }
