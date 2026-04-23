@@ -401,7 +401,7 @@ namespace MissionPlanner.GCSViews
         private const int MapDragMoveThresholdPx = 3;
         private readonly object _mapCenterUpdateLock = new object();
         private PointLatLng? _pendingMapCenter;
-        private bool _mapCenterApplyQueued;
+        private volatile bool _mapCenterApplyQueued;
         private System.Windows.Forms.Timer _overlayVisibilityDebounceTimer;
         private bool _overlayVisibilityPending;
 
@@ -4880,6 +4880,15 @@ namespace MissionPlanner.GCSViews
                          tracklast.AddSeconds(Settings.Instance.GetDouble("FD_MapUpdateDelay", 0.3)) < DateTime.Now) ||
                         tracklast.AddSeconds(2) < DateTime.Now)
                     {
+                        // When the operator is actively dragging/zooming the map, defer heavy map/overlay work.
+                        // This prevents telemetry/map refresh from competing with HUD video rendering on the UI thread.
+                        if (_mapDragInProgress || _mapCenterApplyQueued)
+                        {
+                            gMapControl1.HoldInvalidation = false;
+                            tracklast = DateTime.Now;
+                            continue;
+                        }
+
                         // show disable joystick button
                         if (MainV2.joystick != null && MainV2.joystick.enabled)
                         {
