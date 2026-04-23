@@ -13,7 +13,6 @@ using MissionPlanner.Maps;
 using MissionPlanner.Utilities;
 
 using MissionPlanner.Warnings;
-using SkiaSharp;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -21,7 +20,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Net.Sockets;
@@ -3635,16 +3633,19 @@ namespace MissionPlanner
                     // On first frame, clear bgimage to reset aspect ratio
                     GCSViews.FlightData.OnHudGStreamerNewFrame();
 
+                    Bitmap detachedFrame = (Bitmap) image.Clone();
+
                     var old = GCSViews.FlightData.myhud.bgimage;
-                    GCSViews.FlightData.myhud.bgimage = new Bitmap(image.Width, image.Height, 4 * image.Width,
-                        PixelFormat.Format32bppPArgb,
-                        image.LockBits(Rectangle.Empty, null, SKColorType.Bgra8888)
-                            .Scan0);
+                    GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
                 }
                 catch
                 {
+                }
+                finally
+                {
+                    image?.Dispose();
                 }
             };
 
@@ -3658,17 +3659,19 @@ namespace MissionPlanner
                         return;
                     }
 
+                    Bitmap detachedFrame = (Bitmap) image.Clone();
+
                     var old = GCSViews.FlightData.myhud.bgimage;
-                    GCSViews.FlightData.myhud.bgimage = new Bitmap(image.Width,
-                        image.Height,
-                        4 * image.Width,
-                        PixelFormat.Format32bppPArgb,
-                        image.LockBits(Rectangle.Empty, null, SKColorType.Bgra8888).Scan0);
+                    GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
                 }
                 catch
                 {
+                }
+                finally
+                {
+                    image?.Dispose();
                 }
             };
 
@@ -3682,15 +3685,19 @@ namespace MissionPlanner
                         return;
                     }
 
+                    Bitmap detachedFrame = (Bitmap) image.Clone();
+
                     var old = GCSViews.FlightData.myhud.bgimage;
-                    GCSViews.FlightData.myhud.bgimage = new Bitmap(image.Width, image.Height, 4 * image.Width,
-                        PixelFormat.Format32bppPArgb,
-                        image.LockBits(Rectangle.Empty, null, SKColorType.Bgra8888).Scan0);
+                    GCSViews.FlightData.myhud.bgimage = detachedFrame;
                     if (old != null)
                         old.Dispose();
                 }
                 catch
                 {
+                }
+                finally
+                {
+                    image?.Dispose();
                 }
             };
 
