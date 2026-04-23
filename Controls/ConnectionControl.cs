@@ -7,6 +7,9 @@ namespace MissionPlanner.Controls
 {
     public partial class ConnectionControl : UserControl
     {
+        private const int LayoutPadding = 2;
+        private const int LayoutSpacing = 6;
+
         public ConnectionControl()
         {
             InitializeComponent();
@@ -15,6 +18,8 @@ namespace MissionPlanner.Controls
                 ShowLinkStats?.Invoke(this, EventArgs.Empty);
             };
             Resize += (sender, args) => LayoutLinkStatsRow();
+            MinimumSize = new Size(260, 48);
+            Size = new Size(260, 48);
             LayoutLinkStatsRow();
         }
 
@@ -43,6 +48,7 @@ namespace MissionPlanner.Controls
             cmb_Connection.Enabled = !isConnected;
 
             UpdateSysIDS();
+            LayoutLinkStatsRow();
         }
 
         private void ConnectionControl_MouseClick(object sender, MouseEventArgs e)
@@ -52,19 +58,40 @@ namespace MissionPlanner.Controls
 
         private void LayoutLinkStatsRow()
         {
+            var rowHeight = Math.Max(cmb_Connection.Height, cmb_Baud.Height);
+            var top = LayoutPadding;
+            var contentWidth = Math.Max(200, Width - (LayoutPadding * 2));
+
+            var connectionWidth = (int)(contentWidth * 0.52);
+            var baudWidth = Math.Max(80, contentWidth - connectionWidth - LayoutSpacing);
+
+            cmb_Connection.Left = LayoutPadding;
+            cmb_Connection.Top = top;
+            cmb_Connection.Width = connectionWidth;
+
+            cmb_Baud.Left = cmb_Connection.Right + LayoutSpacing;
+            cmb_Baud.Top = top;
+            cmb_Baud.Width = baudWidth;
+
+            var secondRowTop = cmb_Connection.Bottom + 2;
             linkLabel1.AutoSize = true;
-            var linkWidth = linkLabel1.GetPreferredSize(Size.Empty).Width;
 
-            var rowLeft = cmb_Connection.Left;
-            var rowRight = Width - 6;
+            if (linkLabel1.Visible)
+            {
+                linkLabel1.Left = LayoutPadding;
+                linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
+                cmb_sysid.Left = linkLabel1.Right + LayoutSpacing;
+            }
+            else
+            {
+                linkLabel1.Left = LayoutPadding;
+                linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
+                cmb_sysid.Left = LayoutPadding;
+            }
 
-            linkLabel1.Left = rowLeft;
-            linkLabel1.Top = cmb_sysid.Top + (cmb_sysid.Height - linkLabel1.Height) / 2;
-
-            var sysLeft = linkLabel1.Right + 10;
-            var fullWidth = Math.Max(120, rowRight - sysLeft);
-            cmb_sysid.Left = sysLeft;
-            cmb_sysid.Width = fullWidth;
+            cmb_sysid.Top = secondRowTop;
+            cmb_sysid.Width = Math.Max(80, (LayoutPadding + contentWidth) - cmb_sysid.Left);
+            Height = cmb_sysid.Bottom + LayoutPadding;
         }
 
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
