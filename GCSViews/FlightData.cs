@@ -4888,6 +4888,15 @@ namespace MissionPlanner.GCSViews
 
                         updateRoutePosition();
 
+                        // Keep drag interaction smooth and avoid starving HUD video while the user is panning.
+                        // During active drag, skip the heavy overlay/marker maintenance block and let GMap render drag frames.
+                        if (gMapControl1?.Core?.IsDragging == true)
+                        {
+                            gMapControl1.HoldInvalidation = false;
+                            tracklast = DateTime.Now;
+                            continue;
+                        }
+
                         // update programed wp course
                         if (waypoints.AddSeconds(5) < DateTime.Now)
                         {

@@ -21,8 +21,6 @@ namespace MissionPlanner.Controls
     {
         public bool inOnPaint = false;
         string otherthread = "";
-        int lastx = 0;
-        int lasty = 0;
         private readonly Timer _wheelZoomTimer;
         private int _pendingWheelDelta;
         public myGMAP()
@@ -181,17 +179,6 @@ namespace MissionPlanner.Controls
         {
             try
             {
-                var buffer = 1;
-                // try prevent alot of cpu usage
-                if (e.X >= lastx - buffer && e.X <= lastx + buffer && e.Y >= lasty - buffer && e.Y <= lasty + buffer)
-                    return;
-
-                if (HoldInvalidation)
-                    return;
-
-                lastx = e.X;
-                lasty = e.Y;
-
                 base.OnMouseMove(e);
             }
             catch (Exception ex) { Console.WriteLine(ex.ToString()); }
