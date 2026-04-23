@@ -156,7 +156,11 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             {
                 if (width > 0)
                 {
-                    child.Width = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Max(560, width - 10) : columnWidth;
+                    var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Max(560, width - 10) : columnWidth;
+                    child.MinimumSize = new Size(targetWidth, 0);
+                    child.MaximumSize = new Size(targetWidth, 0);
+                    child.Width = targetWidth;
+                    child.Height = child.PreferredSize.Height;
                 }
             }
         }
@@ -165,7 +169,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             return new GroupBox
             {
-                AutoSize = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(10),
                 Text = title,
                 Margin = new Padding(5)
