@@ -2539,28 +2539,32 @@ namespace MissionPlanner
                                     {
                                         if (sticksDue)
                                         {
-                                            MAVLink.mavlink_rc_channels_override_t rcSticks = new MAVLink.mavlink_rc_channels_override_t();
-                                            rcSticks.target_component = rc.target_component;
-                                            rcSticks.target_system = rc.target_system;
-                                            rcSticks.chan1_raw = rc.chan1_raw;
-                                            rcSticks.chan2_raw = rc.chan2_raw;
-                                            rcSticks.chan3_raw = rc.chan3_raw;
-                                            rcSticks.chan4_raw = rc.chan4_raw;
-                                            rcSticks.chan5_raw = ushort.MaxValue;
-                                            rcSticks.chan6_raw = ushort.MaxValue;
-                                            rcSticks.chan7_raw = ushort.MaxValue;
-                                            rcSticks.chan8_raw = ushort.MaxValue;
-                                            rcSticks.chan9_raw = ushort.MaxValue;
-                                            rcSticks.chan10_raw = ushort.MaxValue;
-                                            rcSticks.chan11_raw = ushort.MaxValue;
-                                            rcSticks.chan12_raw = ushort.MaxValue;
-                                            rcSticks.chan13_raw = ushort.MaxValue;
-                                            rcSticks.chan14_raw = ushort.MaxValue;
-                                            rcSticks.chan15_raw = ushort.MaxValue;
-                                            rcSticks.chan16_raw = ushort.MaxValue;
-                                            rcSticks.chan17_raw = ushort.MaxValue;
-                                            rcSticks.chan18_raw = ushort.MaxValue;
-                                            comPort.sendPacket(rcSticks, rcSticks.target_system, rcSticks.target_component);
+                                            // Drop stale stick frames when output queue is busy to avoid control "freeze then replay" latency spikes.
+                                            if (comPort.BaseStream.BytesToWrite < 120)
+                                            {
+                                                MAVLink.mavlink_rc_channels_override_t rcSticks = new MAVLink.mavlink_rc_channels_override_t();
+                                                rcSticks.target_component = rc.target_component;
+                                                rcSticks.target_system = rc.target_system;
+                                                rcSticks.chan1_raw = rc.chan1_raw;
+                                                rcSticks.chan2_raw = rc.chan2_raw;
+                                                rcSticks.chan3_raw = rc.chan3_raw;
+                                                rcSticks.chan4_raw = rc.chan4_raw;
+                                                rcSticks.chan5_raw = ushort.MaxValue;
+                                                rcSticks.chan6_raw = ushort.MaxValue;
+                                                rcSticks.chan7_raw = ushort.MaxValue;
+                                                rcSticks.chan8_raw = ushort.MaxValue;
+                                                rcSticks.chan9_raw = ushort.MaxValue;
+                                                rcSticks.chan10_raw = ushort.MaxValue;
+                                                rcSticks.chan11_raw = ushort.MaxValue;
+                                                rcSticks.chan12_raw = ushort.MaxValue;
+                                                rcSticks.chan13_raw = ushort.MaxValue;
+                                                rcSticks.chan14_raw = ushort.MaxValue;
+                                                rcSticks.chan15_raw = ushort.MaxValue;
+                                                rcSticks.chan16_raw = ushort.MaxValue;
+                                                rcSticks.chan17_raw = ushort.MaxValue;
+                                                rcSticks.chan18_raw = ushort.MaxValue;
+                                                comPort.sendPacket(rcSticks, rcSticks.target_system, rcSticks.target_component);
+                                            }
                                             lastjoystick = now;
                                         }
 

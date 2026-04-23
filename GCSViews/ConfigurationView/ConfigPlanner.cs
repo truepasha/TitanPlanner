@@ -165,8 +165,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             return new GroupBox
             {
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                AutoSize = false,
                 Padding = new Padding(10),
                 Text = title,
                 Margin = new Padding(5)
