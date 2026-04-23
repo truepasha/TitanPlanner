@@ -2578,7 +2578,8 @@ namespace MissionPlanner
                         }
                     }
 
-                    await Task.Delay(40).ConfigureAwait(false);
+                    var loopDelayMs = Math.Max(1, Math.Min(5, fastRateMs / 4));
+                    await Task.Delay(loopDelayMs).ConfigureAwait(false);
                 }
                 catch
                 {

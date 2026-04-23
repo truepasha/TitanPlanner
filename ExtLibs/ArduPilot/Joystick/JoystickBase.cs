@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -1065,11 +1066,17 @@ namespace MissionPlanner.Joystick
         /// </summary>
         protected virtual void mainloop()
         {
+            var nextTick = Stopwatch.GetTimestamp();
+
             while (enabled && IsJoystickValid())
             {
                 try
                 {
-                    System.Threading.Thread.Sleep(PollIntervalMs);
+                    var intervalTicks = (long)(Stopwatch.Frequency * (PollIntervalMs / 1000.0));
+                    if (Stopwatch.GetTimestamp() - nextTick > intervalTicks * 4)
+                        nextTick = Stopwatch.GetTimestamp();
+                    nextTick += intervalTicks;
+                    WaitUntil(nextTick);
                     //joystick stuff
                     state = GetCurrentState();
 
@@ -1179,6 +1186,27 @@ namespace MissionPlanner.Joystick
                 {
                     log.Info("Joystick thread error " + ex.ToString());
                 } // so we cant fall out
+            }
+        }
+
+        private static void WaitUntil(long targetTick)
+        {
+            while (true)
+            {
+                var now = Stopwatch.GetTimestamp();
+                var remainingTicks = targetTick - now;
+                if (remainingTicks <= 0)
+                    return;
+
+                var remainingMs = remainingTicks * 1000.0 / Stopwatch.Frequency;
+                if (remainingMs > 2)
+                {
+                    Thread.Sleep(1);
+                }
+                else
+                {
+                    Thread.SpinWait(100);
+                }
             }
         }
 
