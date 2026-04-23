@@ -158,7 +158,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
 
             var width = Math.Max(700, Parent?.ClientSize.Width ?? layoutRoot.ClientSize.Width);
-            var columnWidth = 540;
+            var columnWidth = 620;
 
             foreach (Control child in layoutRoot.Controls)
             {
@@ -166,7 +166,6 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 {
                     var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? (columnWidth * 2 + 20) : columnWidth;
                     child.MinimumSize = new Size(targetWidth, 0);
-                    child.MaximumSize = new Size(targetWidth, 0);
                     child.Width = targetWidth;
                 }
             }
@@ -200,7 +199,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
             if (columns > 1)
             {
-                table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             }
             if (columns > 2)
             {
@@ -1630,7 +1629,10 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private void BUT_speechConditions_Click(object sender, EventArgs e)
         {
-            new MissionPlanner.Warnings.WarningsManager().ShowUserControl();
+            using (var manager = new MissionPlanner.Warnings.WarningsManager())
+            {
+                manager.ShowDialog(MainV2.instance);
+            }
         }
 
         private void CHK_params_bg_CheckedChanged(object sender, EventArgs e)
