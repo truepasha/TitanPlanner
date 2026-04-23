@@ -4117,7 +4117,6 @@ namespace MissionPlanner.GCSViews
         {
             MouseDownStart = gMapControl1.FromLocalToLatLng(e.X, e.Y);
             MouseDownStartLocal = e.Location;
-            Console.WriteLine("gMapControl1_MouseDown "+ MouseDownStart);
 
             if (ModifierKeys == Keys.Control)
             {
@@ -7525,7 +7524,6 @@ namespace MissionPlanner.GCSViews
         {
             var posstart = gMapControl1.FromLatLngToLocal(MouseDownStart);
             var MouseDownEnd = gMapControl1.FromLocalToLatLng(e.X, e.Y);
-            Console.WriteLine("gMapControl1_MouseUp "+ MouseDownEnd);
 
             if (gMapControl1.Core.IsDragging)
                 return;

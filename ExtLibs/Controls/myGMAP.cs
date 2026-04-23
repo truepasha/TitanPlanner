@@ -23,6 +23,10 @@ namespace MissionPlanner.Controls
         string otherthread = "";
         int lastx = 0;
         int lasty = 0;
+        private DateTime _lastInteractivePaintUtc = DateTime.MinValue;
+        private DateTime _lastZoomInteractionUtc = DateTime.MinValue;
+        private static readonly TimeSpan InteractivePaintMinInterval = TimeSpan.FromMilliseconds(66); // ~15 FPS
+        private static readonly TimeSpan ZoomInteractionWindow = TimeSpan.FromMilliseconds(180);
         public myGMAP()
             : base()
         {
@@ -87,6 +91,14 @@ namespace MissionPlanner.Controls
         {
             var start = DateTime.Now;
 
+            var nowUtc = DateTime.UtcNow;
+            bool interactiveRender = Core.IsDragging || (nowUtc - _lastZoomInteractionUtc) < ZoomInteractionWindow;
+            if (interactiveRender && (nowUtc - _lastInteractivePaintUtc) < InteractivePaintMinInterval)
+            {
+                return;
+            }
+            _lastInteractivePaintUtc = nowUtc;
+
             if (inOnPaint)
             {
                 Console.WriteLine("Was in onpaint Gmap th:" + System.Threading.Thread.CurrentThread.Name + " in " + otherthread);
@@ -125,6 +137,7 @@ namespace MissionPlanner.Controls
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
+            _lastZoomInteractionUtc = DateTime.UtcNow;
             if (!Core.IsDragging)
             {
                 // Calculate zoom change - standard delta is 120, so normalize
