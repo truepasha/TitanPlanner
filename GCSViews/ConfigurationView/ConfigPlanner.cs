@@ -193,7 +193,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
             if (columns > 1)
             {
-                table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+                table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             }
             if (columns > 2)
             {

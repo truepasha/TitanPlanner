@@ -724,7 +724,6 @@ namespace MissionPlanner
             };
 
             MAVLinkInterface.gcssysid = (byte) Settings.Instance.GetByte("gcsid", 210);
-            UpdateGcsMavIdLabel();
 
             Form splash = Program.Splash;
 
@@ -744,6 +743,16 @@ namespace MissionPlanner
             }
 
             InitializeComponent();
+            TXT_GcsMavId.Leave += (s, e) => ApplyToolbarGcsIdFromInput();
+            TXT_GcsMavId.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    ApplyToolbarGcsIdFromInput();
+                    e.SuppressKeyPress = true;
+                }
+            };
+            UpdateGcsMavIdLabel();
 
             //Init Theme table and load BurntKermit as a default
             ThemeManager.thmColor = new ThemeColorTable(); //Init colortable
@@ -2369,14 +2378,28 @@ namespace MissionPlanner
 
         public void UpdateGcsMavIdLabel()
         {
-            if (LBL_GcsMavId == null)
+            if (TXT_GcsMavId == null)
                 return;
 
-            var text = $"GCS:{MAVLinkInterface.gcssysid}";
+            var text = MAVLinkInterface.gcssysid.ToString(CultureInfo.InvariantCulture);
             if (InvokeRequired)
-                BeginInvoke((Action)delegate { LBL_GcsMavId.Text = text; });
+                BeginInvoke((Action)delegate { TXT_GcsMavId.Text = text; });
             else
-                LBL_GcsMavId.Text = text;
+                TXT_GcsMavId.Text = text;
+        }
+
+        private void ApplyToolbarGcsIdFromInput()
+        {
+            if (TXT_GcsMavId == null || !TXT_GcsMavId.Enabled)
+                return;
+
+            if (byte.TryParse(TXT_GcsMavId.Text, out var gcsId))
+            {
+                MAVLinkInterface.gcssysid = gcsId;
+                Settings.Instance["gcsid"] = gcsId.ToString(CultureInfo.InvariantCulture);
+            }
+
+            UpdateGcsMavIdLabel();
         }
 
         /// <summary>
@@ -2537,10 +2560,12 @@ namespace MissionPlanner
                                     }
                                     else
                                     {
+                                        var isUdpLink = comPort.BaseStream is UdpSerial || comPort.BaseStream is UdpSerialConnect;
+
                                         if (sticksDue)
                                         {
                                             // Drop stale stick frames when output queue is busy to avoid control "freeze then replay" latency spikes.
-                                            if (comPort.BaseStream.BytesToWrite < 120)
+                                            if (isUdpLink || comPort.BaseStream.BytesToWrite < 120)
                                             {
                                                 MAVLink.mavlink_rc_channels_override_t rcSticks = new MAVLink.mavlink_rc_channels_override_t();
                                                 rcSticks.target_component = rc.target_component;
@@ -2568,7 +2593,7 @@ namespace MissionPlanner
                                             lastjoystick = now;
                                         }
 
-                                        if (auxDue && comPort.BaseStream.BytesToWrite < 500)
+                                        if (auxDue && (isUdpLink || comPort.BaseStream.BytesToWrite < 500))
                                         {
                                             comPort.sendPacket(rc, rc.target_system, rc.target_component);
                                             lastjoystickAux = now;
@@ -2648,6 +2673,7 @@ namespace MissionPlanner
                             this.MenuConnect.Image = displayicons.disconnect;
                             this.MenuConnect.Image.Tag = "Disconnect";
                             this.MenuConnect.Text = Strings.DISCONNECTc;
+                            TXT_GcsMavId.Enabled = false;
                             _connectionControl.IsConnected(true);
                         });
                     }
@@ -2661,6 +2687,7 @@ namespace MissionPlanner
                             this.MenuConnect.Image = displayicons.connect;
                             this.MenuConnect.Image.Tag = "Connect";
                             this.MenuConnect.Text = Strings.CONNECTc;
+                            TXT_GcsMavId.Enabled = true;
                             _connectionControl.IsConnected(false);
                             if (_connectionStats != null)
                             {

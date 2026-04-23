@@ -51,7 +51,8 @@ namespace MissionPlanner
             this.toolStripVehicleState = new MissionPlanner.Controls.ToolStripVehicleState();
             this.MenuHelp = new System.Windows.Forms.ToolStripButton();
             this.MenuConnect = new System.Windows.Forms.ToolStripButton();
-            this.LBL_GcsMavId = new System.Windows.Forms.ToolStripLabel();
+            this.LBL_GcsMavIdTitle = new System.Windows.Forms.ToolStripLabel();
+            this.TXT_GcsMavId = new System.Windows.Forms.ToolStripTextBox();
             this.toolStripConnectionControl = new MissionPlanner.Controls.ToolStripConnectionControl();
             this.MenuArduPilot = new System.Windows.Forms.ToolStripButton();
             this.menu = new MissionPlanner.Controls.MyButton();
@@ -78,7 +79,8 @@ namespace MissionPlanner
             this.toolStripVehicleState,
             this.MenuConnect,
             this.toolStripConnectionControl,
-            this.LBL_GcsMavId,
+            this.TXT_GcsMavId,
+            this.LBL_GcsMavIdTitle,
             this.MenuArduPilot});
             this.MainMenu.Name = "MainMenu";
             this.MainMenu.ShowItemToolTips = true;
@@ -194,14 +196,23 @@ namespace MissionPlanner
             this.MenuConnect.Name = "MenuConnect";
             this.MenuConnect.Click += new System.EventHandler(this.MenuConnect_Click);
             // 
-            // LBL_GcsMavId
+            // LBL_GcsMavIdTitle
             // 
-            this.LBL_GcsMavId.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.LBL_GcsMavId.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.LBL_GcsMavId.Margin = new System.Windows.Forms.Padding(8, 0, 8, 0);
-            this.LBL_GcsMavId.Name = "LBL_GcsMavId";
-            this.LBL_GcsMavId.Size = new System.Drawing.Size(52, 28);
-            this.LBL_GcsMavId.Text = "GCS:---";
+            this.LBL_GcsMavIdTitle.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.LBL_GcsMavIdTitle.ForeColor = System.Drawing.SystemColors.ControlLight;
+            this.LBL_GcsMavIdTitle.Margin = new System.Windows.Forms.Padding(8, 0, 4, 0);
+            this.LBL_GcsMavIdTitle.Name = "LBL_GcsMavIdTitle";
+            this.LBL_GcsMavIdTitle.Size = new System.Drawing.Size(52, 28);
+            this.LBL_GcsMavIdTitle.Text = "GCS ID:";
+            // 
+            // TXT_GcsMavId
+            // 
+            this.TXT_GcsMavId.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.TXT_GcsMavId.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.TXT_GcsMavId.ForeColor = System.Drawing.Color.Black;
+            this.TXT_GcsMavId.Margin = new System.Windows.Forms.Padding(0, 0, 8, 0);
+            this.TXT_GcsMavId.Name = "TXT_GcsMavId";
+            this.TXT_GcsMavId.Size = new System.Drawing.Size(36, 28);
             // 
             // toolStripConnectionControl
             // 
@@ -272,7 +283,8 @@ namespace MissionPlanner
         public System.Windows.Forms.ToolStripButton MenuSimulation;
         public System.Windows.Forms.ToolStripButton MenuConfigTune;
         public System.Windows.Forms.ToolStripButton MenuConnect;
-        private System.Windows.Forms.ToolStripLabel LBL_GcsMavId;
+        private System.Windows.Forms.ToolStripLabel LBL_GcsMavIdTitle;
+        private System.Windows.Forms.ToolStripTextBox TXT_GcsMavId;
         private Controls.ToolStripConnectionControl toolStripConnectionControl;
         private Controls.MyButton menu;
         public System.Windows.Forms.Panel panel1;
