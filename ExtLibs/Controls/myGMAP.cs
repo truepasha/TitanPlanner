@@ -26,6 +26,10 @@ namespace MissionPlanner.Controls
         private uint _lastDragMoveTick;
         // Limit drag processing frequency to keep UI responsive for HUD/video rendering.
         private const int DragMoveThrottleMs = 15;
+        private bool _dragSimplifiedRenderEnabled;
+        private bool _savedMarkersEnabled;
+        private bool _savedRoutesEnabled;
+        private bool _savedPolygonsEnabled;
         public myGMAP()
             : base()
         {
@@ -148,11 +152,17 @@ namespace MissionPlanner.Controls
             {
                 if (Core.IsDragging)
                 {
+                    EnableSimplifiedDragRender();
+
                     uint nowTick = unchecked((uint)Environment.TickCount);
                     if (nowTick - _lastDragMoveTick < (uint)DragMoveThrottleMs)
                         return;
 
                     _lastDragMoveTick = nowTick;
+                }
+                else
+                {
+                    DisableSimplifiedDragRender();
                 }
 
                 var buffer = 1;
@@ -169,6 +179,44 @@ namespace MissionPlanner.Controls
                 base.OnMouseMove(e);
             }
             catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            DisableSimplifiedDragRender();
+            base.OnMouseUp(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            DisableSimplifiedDragRender();
+            base.OnMouseLeave(e);
+        }
+
+        private void EnableSimplifiedDragRender()
+        {
+            if (_dragSimplifiedRenderEnabled)
+                return;
+
+            _savedMarkersEnabled = MarkersEnabled;
+            _savedRoutesEnabled = RoutesEnabled;
+            _savedPolygonsEnabled = PolygonsEnabled;
+
+            MarkersEnabled = false;
+            RoutesEnabled = false;
+            PolygonsEnabled = false;
+            _dragSimplifiedRenderEnabled = true;
+        }
+
+        private void DisableSimplifiedDragRender()
+        {
+            if (!_dragSimplifiedRenderEnabled)
+                return;
+
+            MarkersEnabled = _savedMarkersEnabled;
+            RoutesEnabled = _savedRoutesEnabled;
+            PolygonsEnabled = _savedPolygonsEnabled;
+            _dragSimplifiedRenderEnabled = false;
         }
 
 
