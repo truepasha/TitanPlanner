@@ -504,6 +504,7 @@ namespace MissionPlanner
         /// track last joystick packet sent. used to control rate
         /// </summary>
         DateTime lastjoystick = DateTime.Now;
+        DateTime lastjoystickAux = DateTime.Now;
 
         /// <summary>
         /// determine if we are running sitl
@@ -2370,7 +2371,9 @@ namespace MissionPlanner
         /// </summary>
         private async void joysticksend()
         {
-            float rate = 50; // 1000 / 50 = 20 hz
+            int fastRateHz = Joystick.JoystickBase.GetConfiguredPollRateHz();
+            int fastRateMs = Math.Max(1, (int)Math.Round(1000.0 / fastRateHz));
+            const int auxRateMs = 50; // original 20 hz for non-stick channels
             int count = 0;
 
             DateTime lastratechange = DateTime.Now;
@@ -2395,6 +2398,12 @@ namespace MissionPlanner
 
                         if (joystick != null && joystick.enabled)
                         {
+                            fastRateHz = Joystick.JoystickBase.GetConfiguredPollRateHz();
+                            fastRateMs = Math.Max(1, (int)Math.Round(1000.0 / fastRateHz));
+                            var now = DateTime.Now;
+                            bool sendFastFrame = lastjoystick.AddMilliseconds(fastRateMs) < now;
+                            bool sendAuxFrame = lastjoystickAux.AddMilliseconds(auxRateMs) < now;
+
                             if (!joystick.manual_control)
                             {
                                 MAVLink.mavlink_rc_channels_override_t
@@ -2411,34 +2420,34 @@ namespace MissionPlanner
                                     rc.chan3_raw = ushort.MaxValue;
                                 if (joystick.getJoystickAxis(4) == Joystick.joystickaxis.None)
                                     rc.chan4_raw = ushort.MaxValue;
-                                if (joystick.getJoystickAxis(5) == Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(5) == Joystick.joystickaxis.None || !sendAuxFrame)
                                     rc.chan5_raw = ushort.MaxValue;
-                                if (joystick.getJoystickAxis(6) == Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(6) == Joystick.joystickaxis.None || !sendAuxFrame)
                                     rc.chan6_raw = ushort.MaxValue;
-                                if (joystick.getJoystickAxis(7) == Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(7) == Joystick.joystickaxis.None || !sendAuxFrame)
                                     rc.chan7_raw = ushort.MaxValue;
-                                if (joystick.getJoystickAxis(8) == Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(8) == Joystick.joystickaxis.None || !sendAuxFrame)
                                     rc.chan8_raw = ushort.MaxValue;
-                                if (joystick.getJoystickAxis(9) == Joystick.joystickaxis.None)
-                                    rc.chan9_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(10) == Joystick.joystickaxis.None)
-                                    rc.chan10_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(11) == Joystick.joystickaxis.None)
-                                    rc.chan11_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(12) == Joystick.joystickaxis.None)
-                                    rc.chan12_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(13) == Joystick.joystickaxis.None)
-                                    rc.chan13_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(14) == Joystick.joystickaxis.None)
-                                    rc.chan14_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(15) == Joystick.joystickaxis.None)
-                                    rc.chan15_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(16) == Joystick.joystickaxis.None)
-                                    rc.chan16_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(17) == Joystick.joystickaxis.None)
-                                    rc.chan17_raw = (ushort) 0;
-                                if (joystick.getJoystickAxis(18) == Joystick.joystickaxis.None)
-                                    rc.chan18_raw = (ushort) 0;
+                                if (joystick.getJoystickAxis(9) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan9_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(10) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan10_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(11) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan11_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(12) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan12_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(13) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan13_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(14) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan14_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(15) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan15_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(16) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan16_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(17) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan17_raw = (ushort)0;
+                                if (joystick.getJoystickAxis(18) == Joystick.joystickaxis.None || !sendAuxFrame)
+                                    rc.chan18_raw = (ushort)0;
 
                                 if (joystick.getJoystickAxis(1) != Joystick.joystickaxis.None)
                                     rc.chan1_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech1;
@@ -2448,36 +2457,36 @@ namespace MissionPlanner
                                     rc.chan3_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech3;
                                 if (joystick.getJoystickAxis(4) != Joystick.joystickaxis.None)
                                     rc.chan4_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech4;
-                                if (joystick.getJoystickAxis(5) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(5) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan5_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech5;
-                                if (joystick.getJoystickAxis(6) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(6) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan6_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech6;
-                                if (joystick.getJoystickAxis(7) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(7) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan7_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech7;
-                                if (joystick.getJoystickAxis(8) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(8) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan8_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech8;
-                                if (joystick.getJoystickAxis(9) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(9) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan9_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech9;
-                                if (joystick.getJoystickAxis(10) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(10) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan10_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech10;
-                                if (joystick.getJoystickAxis(11) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(11) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan11_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech11;
-                                if (joystick.getJoystickAxis(12) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(12) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan12_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech12;
-                                if (joystick.getJoystickAxis(13) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(13) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan13_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech13;
-                                if (joystick.getJoystickAxis(14) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(14) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan14_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech14;
-                                if (joystick.getJoystickAxis(15) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(15) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan15_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech15;
-                                if (joystick.getJoystickAxis(16) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(16) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan16_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech16;
-                                if (joystick.getJoystickAxis(17) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(17) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan17_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech17;
-                                if (joystick.getJoystickAxis(18) != Joystick.joystickaxis.None)
+                                if (joystick.getJoystickAxis(18) != Joystick.joystickaxis.None && sendAuxFrame)
                                     rc.chan18_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech18;
 
-                                if (lastjoystick.AddMilliseconds(rate) < DateTime.Now)
+                                if (sendFastFrame)
                                 {
                                     /*
                                 if (MainV2.comPort.MAV.cs.rssi > 0 && MainV2.comPort.MAV.cs.remrssi > 0)
@@ -2524,7 +2533,9 @@ namespace MissionPlanner
                                         }
 
                                         count++;
-                                        lastjoystick = DateTime.Now;
+                                        lastjoystick = now;
+                                        if (sendAuxFrame)
+                                            lastjoystickAux = now;
                                     }
                                 }
                             }
@@ -2543,7 +2554,7 @@ namespace MissionPlanner
                                 if (joystick.getJoystickAxis(4) != Joystick.joystickaxis.None)
                                     rc.r = MainV2.comPort.MAV.cs.rcoverridech4;
 
-                                if (lastjoystick.AddMilliseconds(rate) < DateTime.Now)
+                                if (sendFastFrame)
                                 {
                                     if (!comPort.BaseStream.IsOpen)
                                         continue;
@@ -2560,7 +2571,7 @@ namespace MissionPlanner
                                         }
 
                                         count++;
-                                        lastjoystick = DateTime.Now;
+                                        lastjoystick = now;
                                     }
                                 }
                             }

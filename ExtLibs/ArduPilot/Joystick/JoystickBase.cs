@@ -25,6 +25,10 @@ namespace MissionPlanner.Joystick
         public static PlatformID pid = Environment.OSVersion.Platform;
 
         public bool manual_control = false;
+        public const int DefaultStickRateHz = 20;
+        public const string PollRateSettingKey = "joystick_poll_rate_hz";
+        public static readonly int[] SupportedStickRatesHz = { DefaultStickRateHz, 25, 50, 100, 200 };
+        private int _pollRateHz = DefaultStickRateHz;
 
         string joystickconfigbutton = "joystickbuttons.xml";
         string joystickconfigaxis = "joystickaxis.xml";
@@ -62,6 +66,7 @@ namespace MissionPlanner.Joystick
         public JoystickBase(Func<MAVLinkInterface> currentInterface)
         {
             this._Interface = currentInterface;
+            PollRateHz = GetConfiguredPollRateHz();
 
             this._context = SynchronizationContext.Current;
             if (_context == null)
@@ -1024,6 +1029,37 @@ namespace MissionPlanner.Joystick
         public abstract bool IsJoystickValid();
         public abstract IMyJoystickState GetCurrentState();
 
+        public int PollRateHz
+        {
+            get => _pollRateHz;
+            set => _pollRateHz = NormalizePollRateHz(value);
+        }
+
+        public int PollIntervalMs => Math.Max(1, (int)Math.Round(1000.0 / PollRateHz));
+
+        public static int NormalizePollRateHz(int rateHz)
+        {
+            if (SupportedStickRatesHz.Contains(rateHz))
+                return rateHz;
+
+            return DefaultStickRateHz;
+        }
+
+        public static int GetConfiguredPollRateHz()
+        {
+            try
+            {
+                if (Settings.Instance.ContainsKey(PollRateSettingKey) &&
+                    int.TryParse(Settings.Instance[PollRateSettingKey]?.ToString(), out var rate))
+                    return NormalizePollRateHz(rate);
+            }
+            catch
+            {
+            }
+
+            return DefaultStickRateHz;
+        }
+
         /// <summary>
         /// Updates the rcoverride values and controls the mode changes
         /// </summary>
@@ -1033,7 +1069,7 @@ namespace MissionPlanner.Joystick
             {
                 try
                 {
-                    System.Threading.Thread.Sleep(50);
+                    System.Threading.Thread.Sleep(PollIntervalMs);
                     //joystick stuff
                     state = GetCurrentState();
 

@@ -14,6 +14,8 @@ namespace MissionPlanner.Joystick
     public partial class JoystickSetup : MyUserControl, IDeactivate
     {
         bool startup = true;
+        private readonly ComboBox cmbStickRate = new ComboBox();
+        private readonly Label lblStickRate = new Label();
 
         int noButtons = 0;
         private int maxaxis = 16;
@@ -27,6 +29,8 @@ namespace MissionPlanner.Joystick
 
         private void Joystick_Load(object sender, EventArgs e)
         {
+            ConfigureStickRateUi();
+
             try
             {
                 var joysticklist = JoystickBase.getDevices();
@@ -65,10 +69,11 @@ namespace MissionPlanner.Joystick
             } // IF 1 DOESNT EXIST NONE WILL
 
             var tempjoystick = JoystickBase.Create(() => MainV2.comPort);
+            tempjoystick.PollRateHz = GetSelectedStickRateHz();
 
             label14.Text += " " + MainV2.comPort.MAV.cs.firmware.ToString();
 
-            var y = label8.Bottom;
+            var y = Math.Max(label8.Bottom, cmbStickRate.Bottom + 8);
 
             this.SuspendLayout();
 
@@ -156,6 +161,7 @@ namespace MissionPlanner.Joystick
                 var joy = JoystickBase.Create(() => MainV2.comPort);
 
                 joy.elevons = CHK_elevons.Checked;
+                joy.PollRateHz = GetSelectedStickRateHz();
 
                 //show error message if a joystick is not connected when Enable is clicked
                 if (!joy.start(CMB_joysticks.Text))
@@ -254,6 +260,7 @@ namespace MissionPlanner.Joystick
                     }
 
                     MainV2.joystick.elevons = CHK_elevons.Checked;
+                    MainV2.joystick.PollRateHz = GetSelectedStickRateHz();
 
                     MainV2.comPort.MAV.cs.rcoverridech1 = joy.getValueForChannel(1);
                     MainV2.comPort.MAV.cs.rcoverridech2 = joy.getValueForChannel(2);
@@ -517,6 +524,80 @@ namespace MissionPlanner.Joystick
                 return;
             }
             MainV2.joystick.elevons = CHK_elevons.Checked;
+        }
+
+        private void ConfigureStickRateUi()
+        {
+            if (!Controls.Contains(cmbStickRate))
+            {
+                lblStickRate.AutoSize = true;
+                lblStickRate.Location = new Point(CMB_joysticks.Left, CMB_joysticks.Bottom + 10);
+                lblStickRate.Name = "lblStickRate";
+                lblStickRate.Text = "Stick rate (CH1-4):";
+                Controls.Add(lblStickRate);
+
+                cmbStickRate.DropDownStyle = ComboBoxStyle.DropDownList;
+                cmbStickRate.FormattingEnabled = true;
+                cmbStickRate.Location = new Point(lblStickRate.Right + 8, lblStickRate.Top - 3);
+                cmbStickRate.Name = "cmbStickRate";
+                cmbStickRate.Size = new Size(160, 21);
+                cmbStickRate.SelectedIndexChanged += cmbStickRate_SelectedIndexChanged;
+                Controls.Add(cmbStickRate);
+            }
+
+            cmbStickRate.Items.Clear();
+            foreach (var rate in JoystickBase.SupportedStickRatesHz)
+            {
+                var label = rate == JoystickBase.DefaultStickRateHz ? $"Original ({rate} Hz)" : $"{rate} Hz";
+                cmbStickRate.Items.Add(new StickRateOption(rate, label));
+            }
+
+            var configuredRate = JoystickBase.GetConfiguredPollRateHz();
+            for (var i = 0; i < cmbStickRate.Items.Count; i++)
+            {
+                if (((StickRateOption)cmbStickRate.Items[i]).RateHz == configuredRate)
+                {
+                    cmbStickRate.SelectedIndex = i;
+                    break;
+                }
+            }
+
+            if (cmbStickRate.SelectedIndex < 0 && cmbStickRate.Items.Count > 0)
+                cmbStickRate.SelectedIndex = 0;
+        }
+
+        private void cmbStickRate_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var rate = GetSelectedStickRateHz();
+            Settings.Instance[JoystickBase.PollRateSettingKey] = rate.ToString();
+
+            if (MainV2.joystick != null)
+                MainV2.joystick.PollRateHz = rate;
+        }
+
+        private int GetSelectedStickRateHz()
+        {
+            if (cmbStickRate.SelectedItem is StickRateOption option)
+                return option.RateHz;
+
+            return JoystickBase.DefaultStickRateHz;
+        }
+
+        private class StickRateOption
+        {
+            public int RateHz { get; }
+            private string Label { get; }
+
+            public StickRateOption(int rateHz, string label)
+            {
+                RateHz = rateHz;
+                Label = label;
+            }
+
+            public override string ToString()
+            {
+                return Label;
+            }
         }
 
         private void chk_manualcontrol_CheckedChanged(object sender, EventArgs e)
