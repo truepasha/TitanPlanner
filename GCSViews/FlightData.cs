@@ -402,6 +402,8 @@ namespace MissionPlanner.GCSViews
         private readonly object _mapCenterUpdateLock = new object();
         private PointLatLng? _pendingMapCenter;
         private bool _mapCenterApplyQueued;
+        private System.Windows.Forms.Timer _overlayVisibilityDebounceTimer;
+        private bool _overlayVisibilityPending;
 
         //The file path of the selected script
         internal string selectedscript = "";
@@ -4250,6 +4252,7 @@ namespace MissionPlanner.GCSViews
             }
 
             center.Position = gMapControl1.Position;
+            RequestUpdateOverlayVisibility();
         }
 
         void gMapControl1_OnMarkerEnter(GMapMarker item)
@@ -4266,7 +4269,7 @@ namespace MissionPlanner.GCSViews
         {
             center.Position = point;
 
-            UpdateOverlayVisibility();
+            RequestUpdateOverlayVisibility();
         }
 
         private void gMapControl1_Resize(object sender, EventArgs e)
@@ -7339,6 +7342,9 @@ namespace MissionPlanner.GCSViews
 
         void UpdateOverlayVisibility()
         {
+            if (kmlpolygons == null || kmlpolygons.Polygons == null || kmlpolygons.Polygons.Count == 0)
+                return;
+
             // change overlay visability
             if (gMapControl1.ViewArea != null)
             {
@@ -7353,6 +7359,30 @@ namespace MissionPlanner.GCSViews
                         poly.IsVisible = false;
                 }
             }
+        }
+
+        private void RequestUpdateOverlayVisibility()
+        {
+            if (_overlayVisibilityDebounceTimer == null)
+            {
+                _overlayVisibilityDebounceTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 150
+                };
+                _overlayVisibilityDebounceTimer.Tick += (s, e) =>
+                {
+                    _overlayVisibilityDebounceTimer.Stop();
+                    if (!_overlayVisibilityPending)
+                        return;
+
+                    _overlayVisibilityPending = false;
+                    UpdateOverlayVisibility();
+                };
+            }
+
+            _overlayVisibilityPending = true;
+            _overlayVisibilityDebounceTimer.Stop();
+            _overlayVisibilityDebounceTimer.Start();
         }
 
         private void updatePlayPauseButton(bool playing)
