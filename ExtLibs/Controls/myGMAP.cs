@@ -23,16 +23,16 @@ namespace MissionPlanner.Controls
         string otherthread = "";
         int lastx = 0;
         int lasty = 0;
-        private DateTime _lastInteractivePaintUtc = DateTime.MinValue;
-        private DateTime _lastZoomInteractionUtc = DateTime.MinValue;
-        private static readonly TimeSpan InteractivePaintMinInterval = TimeSpan.FromMilliseconds(66); // ~15 FPS
-        private static readonly TimeSpan ZoomInteractionWindow = TimeSpan.FromMilliseconds(180);
+        private readonly Timer _wheelZoomTimer;
+        private int _pendingWheelDelta;
         public myGMAP()
             : base()
         {
             this.Text = "Map";
             IgnoreMarkerOnMouseWheel = true;
             GestureHappened += MyGMAP_GestureHappened;
+            _wheelZoomTimer = new Timer { Interval = 40 };
+            _wheelZoomTimer.Tick += WheelZoomTimer_Tick;
         }
 
         GMapMarker p1 = new GMarkerGoogle(PointLatLng.Empty, GMarkerGoogleType.blue_small);
@@ -91,14 +91,6 @@ namespace MissionPlanner.Controls
         {
             var start = DateTime.Now;
 
-            var nowUtc = DateTime.UtcNow;
-            bool interactiveRender = Core.IsDragging || (nowUtc - _lastZoomInteractionUtc) < ZoomInteractionWindow;
-            if (interactiveRender && (nowUtc - _lastInteractivePaintUtc) < InteractivePaintMinInterval)
-            {
-                return;
-            }
-            _lastInteractivePaintUtc = nowUtc;
-
             if (inOnPaint)
             {
                 Console.WriteLine("Was in onpaint Gmap th:" + System.Threading.Thread.CurrentThread.Name + " in " + otherthread);
@@ -127,22 +119,55 @@ namespace MissionPlanner.Controls
             base.OnInvalidated(e);
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_wheelZoomTimer != null)
+                {
+                    _wheelZoomTimer.Stop();
+                    _wheelZoomTimer.Tick -= WheelZoomTimer_Tick;
+                    _wheelZoomTimer.Dispose();
+                }
+            }
+
+            base.Dispose(disposing);
+        }
+
         public new void Invalidate()
         {
             base.Invalidate();
         }
 
         // Smooth mouse wheel zoom - 0.1 per scroll tick
-        private const double ZoomIncrement = 0.2;
+        private const int ZoomIncrement = 1;
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
-            _lastZoomInteractionUtc = DateTime.UtcNow;
+            _pendingWheelDelta += e.Delta;
+            if (!_wheelZoomTimer.Enabled)
+                _wheelZoomTimer.Start();
+        }
+
+        private void WheelZoomTimer_Tick(object sender, EventArgs e)
+        {
+            var delta = _pendingWheelDelta;
+            _pendingWheelDelta = 0;
+
+            if (delta == 0)
+            {
+                _wheelZoomTimer.Stop();
+                return;
+            }
+
             if (!Core.IsDragging)
             {
-                // Calculate zoom change - standard delta is 120, so normalize
-                double zoomChange = (e.Delta / 120.0) * ZoomIncrement;
-                double newZoom = Zoom + zoomChange;
+                // Coalesce wheel input and apply integer zoom steps at a controlled rate.
+                int zoomSteps = delta / 120;
+                if (zoomSteps == 0)
+                    zoomSteps = Math.Sign(delta);
+
+                double newZoom = Zoom + (zoomSteps * ZoomIncrement);
 
                 // Clamp to valid range
                 if (newZoom < MinZoom) newZoom = MinZoom;
