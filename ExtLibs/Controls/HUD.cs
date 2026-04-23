@@ -269,6 +269,20 @@ namespace MissionPlanner.Controls
 
             graphicsObject = this;
             graphicsObjectGDIP = new GdiGraphics(Graphics.FromImage(objBitmap));
+
+            _videoInvalidateTimer = new System.Windows.Forms.Timer
+            {
+                Interval = VideoInvalidateIntervalMs
+            };
+            _videoInvalidateTimer.Tick += (s, e) =>
+            {
+                if (!_videoFramePending)
+                    return;
+
+                _videoFramePending = false;
+                Invalidate();
+            };
+            _videoInvalidateTimer.Start();
         }
 
         protected override void Dispose(bool disposing)
@@ -290,6 +304,12 @@ namespace MissionPlanner.Controls
                     if (texid.gltextureid != 0)
                         GL.DeleteTexture(texid.gltextureid);
                 }
+            }
+
+            if (_videoInvalidateTimer != null)
+            {
+                _videoInvalidateTimer.Stop();
+                _videoInvalidateTimer.Dispose();
             }
 
             base.Dispose(disposing);
@@ -1043,6 +1063,9 @@ namespace MissionPlanner.Controls
         private static readonly SolidBrush AltGroundBrush = new SolidBrush(Color.FromArgb(100, Color.BurlyWood));
 
         private readonly object _bgimagelock = new object();
+        private readonly System.Windows.Forms.Timer _videoInvalidateTimer;
+        private volatile bool _videoFramePending;
+        private const int VideoInvalidateIntervalMs = 33;
 
         public Image bgimage
         {
@@ -1059,8 +1082,9 @@ namespace MissionPlanner.Controls
                         _bgimage = null;
                     }
 
-                    this.Invalidate();
                 }
+
+                _videoFramePending = true;
             }
             get { return _bgimage; }
         }
