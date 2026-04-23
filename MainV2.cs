@@ -780,9 +780,7 @@ namespace MissionPlanner
             ((SerialPort)comPort.BaseStream).espFix = Settings.Instance.GetBoolean("CHK_rtsresetesp32", false);
 
             _connectionControl = toolStripConnectionControl.ConnectionControl;
-            toolStripConnectionControl.AutoSize = false;
-            toolStripConnectionControl.Width = 440;
-            _connectionControl.Width = toolStripConnectionControl.Width;
+            toolStripConnectionControl.AutoSize = true;
             _connectionControl.CMB_baudrate.TextChanged += this.CMB_baudrate_TextChanged;
             _connectionControl.CMB_serialport.SelectedIndexChanged += this.CMB_serialport_SelectedIndexChanged;
             _connectionControl.CMB_serialport.Click += this.CMB_serialport_Click;
@@ -2583,10 +2581,10 @@ namespace MissionPlanner
                         }
                     }
 
-                    if (fastRateMs <= 10)
+                    if (fastRateMs <= 40)
                     {
                         Thread.Sleep(0);
-                        Thread.SpinWait(100);
+                        Thread.SpinWait(400);
                     }
                     else
                     {

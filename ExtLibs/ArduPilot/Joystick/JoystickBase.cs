@@ -26,7 +26,7 @@ namespace MissionPlanner.Joystick
         public static PlatformID pid = Environment.OSVersion.Platform;
 
         public bool manual_control = false;
-        public const int DefaultStickRateHz = 20;
+        public const int DefaultStickRateHz = 16;
         public const string PollRateSettingKey = "joystick_poll_rate_hz";
         public static readonly int[] SupportedStickRatesHz = { DefaultStickRateHz, 25, 50, 100, 200 };
         private int _pollRateHz = DefaultStickRateHz;
@@ -1040,6 +1040,9 @@ namespace MissionPlanner.Joystick
 
         public static int NormalizePollRateHz(int rateHz)
         {
+            if (rateHz == 20)
+                return DefaultStickRateHz;
+
             if (SupportedStickRatesHz.Contains(rateHz))
                 return rateHz;
 

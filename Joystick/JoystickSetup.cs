@@ -560,7 +560,9 @@ namespace MissionPlanner.Joystick
             cmbStickRate.Items.Clear();
             foreach (var rate in JoystickBase.SupportedStickRatesHz)
             {
-                var label = rate == JoystickBase.DefaultStickRateHz ? $"Original ({rate} Hz)" : $"{rate} Hz";
+                const int rcOverrideBytesPerPacket = 30;
+                var estimatedBps = rate * rcOverrideBytesPerPacket;
+                var label = $"{rate} Hz ({estimatedBps} Bps)";
                 cmbStickRate.Items.Add(new StickRateOption(rate, label));
             }
 
