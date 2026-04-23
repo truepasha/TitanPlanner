@@ -399,6 +399,9 @@ namespace MissionPlanner.GCSViews
         private uint _lastMapDragUpdateTick;
         private const int MapDragUpdateMs = 20;
         private const int MapDragMoveThresholdPx = 3;
+        private readonly object _mapCenterUpdateLock = new object();
+        private PointLatLng? _pendingMapCenter;
+        private bool _mapCenterApplyQueued;
 
         //The file path of the selected script
         internal string selectedscript = "";
@@ -4205,7 +4208,7 @@ namespace MissionPlanner.GCSViews
                 if (!double.IsNaN(newCenter.Lat) && !double.IsNaN(newCenter.Lng) &&
                     !double.IsInfinity(newCenter.Lat) && !double.IsInfinity(newCenter.Lng))
                 {
-                    gMapControl1.Position = newCenter;
+                    QueueMapCenterUpdate(newCenter);
                 }
             }
             else
@@ -7585,7 +7588,7 @@ namespace MissionPlanner.GCSViews
                 if (!double.IsNaN(newCenter.Lat) && !double.IsNaN(newCenter.Lng) &&
                     !double.IsInfinity(newCenter.Lat) && !double.IsInfinity(newCenter.Lng))
                 {
-                    gMapControl1.Position = newCenter;
+                    QueueMapCenterUpdate(newCenter);
                 }
             }
 
@@ -7613,6 +7616,42 @@ namespace MissionPlanner.GCSViews
             {
                // contextMenuStripMap.Show(gMapControl1, e.Location);
             }
+        }
+
+        /// <summary>
+        /// Queue map center updates asynchronously and coalesce rapid drag events into the latest center.
+        /// This prevents heavy map re-centering work from monopolizing the same UI message that handles drag input.
+        /// </summary>
+        private void QueueMapCenterUpdate(PointLatLng newCenter)
+        {
+            lock (_mapCenterUpdateLock)
+            {
+                _pendingMapCenter = newCenter;
+                if (_mapCenterApplyQueued)
+                    return;
+                _mapCenterApplyQueued = true;
+            }
+
+            BeginInvoke((Action)delegate
+            {
+                while (true)
+                {
+                    PointLatLng? centerToApply;
+                    lock (_mapCenterUpdateLock)
+                    {
+                        centerToApply = _pendingMapCenter;
+                        _pendingMapCenter = null;
+
+                        if (!centerToApply.HasValue)
+                        {
+                            _mapCenterApplyQueued = false;
+                            return;
+                        }
+                    }
+
+                    gMapControl1.Position = centerToApply.Value;
+                }
+            });
         }
 
         private void setBatteryCellCountToolStripMenuItem_Click(object sender, EventArgs e)
