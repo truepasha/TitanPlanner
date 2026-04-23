@@ -9,10 +9,15 @@ namespace MissionPlanner.Controls
     {
         private const int LayoutPadding = 2;
         private const int LayoutSpacing = 6;
+        private readonly Label lblGcsId = new Label();
 
         public ConnectionControl()
         {
             InitializeComponent();
+            lblGcsId.AutoSize = true;
+            lblGcsId.BackColor = Color.Transparent;
+            lblGcsId.ForeColor = Color.White;
+            Controls.Add(lblGcsId);
             this.linkLabel1.Click += (sender, e) =>
             {
                 ShowLinkStats?.Invoke(this, EventArgs.Empty);
@@ -20,6 +25,7 @@ namespace MissionPlanner.Controls
             Resize += (sender, args) => LayoutLinkStatsRow();
             MinimumSize = new Size(260, 48);
             Size = new Size(260, 48);
+            UpdateGcsIdLabel();
             LayoutLinkStatsRow();
         }
 
@@ -48,6 +54,7 @@ namespace MissionPlanner.Controls
             cmb_Connection.Enabled = !isConnected;
 
             UpdateSysIDS();
+            UpdateGcsIdLabel();
             LayoutLinkStatsRow();
         }
 
@@ -62,36 +69,35 @@ namespace MissionPlanner.Controls
             var top = LayoutPadding;
             var contentWidth = Math.Max(200, Width - (LayoutPadding * 2));
 
-            var connectionWidth = (int)(contentWidth * 0.52);
-            var baudWidth = Math.Max(80, contentWidth - connectionWidth - LayoutSpacing);
+            var col1Width = Math.Max(90, lblGcsId.GetPreferredSize(Size.Empty).Width + 6);
+            var col3Width = Math.Max(90, cmb_Baud.Width);
+            var col2Width = Math.Max(80, contentWidth - col1Width - col3Width - (LayoutSpacing * 2));
 
-            cmb_Connection.Left = LayoutPadding;
+            lblGcsId.Left = LayoutPadding;
+            lblGcsId.Top = top + (rowHeight - lblGcsId.Height) / 2;
+
+            cmb_Connection.Left = lblGcsId.Right + LayoutSpacing;
             cmb_Connection.Top = top;
-            cmb_Connection.Width = connectionWidth;
+            cmb_Connection.Width = col2Width;
 
             cmb_Baud.Left = cmb_Connection.Right + LayoutSpacing;
             cmb_Baud.Top = top;
-            cmb_Baud.Width = baudWidth;
+            cmb_Baud.Width = col3Width;
 
             var secondRowTop = cmb_Connection.Bottom + 2;
             linkLabel1.AutoSize = true;
+            linkLabel1.Left = LayoutPadding;
+            linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
 
-            if (linkLabel1.Visible)
-            {
-                linkLabel1.Left = LayoutPadding;
-                linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
-                cmb_sysid.Left = linkLabel1.Right + LayoutSpacing;
-            }
-            else
-            {
-                linkLabel1.Left = LayoutPadding;
-                linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
-                cmb_sysid.Left = LayoutPadding;
-            }
-
+            cmb_sysid.Left = lblGcsId.Right + LayoutSpacing;
             cmb_sysid.Top = secondRowTop;
             cmb_sysid.Width = Math.Max(80, (LayoutPadding + contentWidth) - cmb_sysid.Left);
             Height = cmb_sysid.Bottom + LayoutPadding;
+        }
+
+        private void UpdateGcsIdLabel()
+        {
+            lblGcsId.Text = $"GCS ID: {MAVLinkInterface.gcssysid}";
         }
 
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
