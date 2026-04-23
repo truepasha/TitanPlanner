@@ -2588,6 +2588,7 @@ namespace MissionPlanner
                 }
                 catch
                 {
+                    await Task.Delay(1).ConfigureAwait(false);
                 } // cant fall out
             }
 
