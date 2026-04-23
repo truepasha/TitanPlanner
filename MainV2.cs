@@ -2578,7 +2578,7 @@ namespace MissionPlanner
                     if (fastRateMs <= 10)
                     {
                         // stay off UI synchronization context in high-rate loop
-                        await Task.Delay(0).ConfigureAwait(false);
+                        await Task.Delay(1).ConfigureAwait(false);
                     }
                     else
                     {

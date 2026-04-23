@@ -1019,7 +1019,7 @@ namespace MissionPlanner.Joystick
             System.Threading.Thread t11 = new System.Threading.Thread(new System.Threading.ThreadStart(mainloop))
             {
                 Name = "Joystick loop",
-                Priority = System.Threading.ThreadPriority.AboveNormal,
+                Priority = System.Threading.ThreadPriority.Normal,
                 IsBackground = true
             };
             t11.Start();
@@ -1212,8 +1212,16 @@ namespace MissionPlanner.Joystick
                     }
                 }
 
-                Thread.Yield();
-                Thread.SpinWait(100);
+                if (highRate)
+                {
+                    Thread.Sleep(0);
+                    Thread.SpinWait(20);
+                }
+                else
+                {
+                    Thread.Yield();
+                    Thread.SpinWait(100);
+                }
             }
         }
 
