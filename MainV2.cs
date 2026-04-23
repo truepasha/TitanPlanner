@@ -743,7 +743,11 @@ namespace MissionPlanner
             }
 
             InitializeComponent();
-            TXT_GcsMavId.Enter += (s, e) => gcsIdEditing = true;
+            TXT_GcsMavId.Enter += (s, e) =>
+            {
+                gcsIdEditing = true;
+                TXT_GcsMavId.Text = MAVLinkInterface.gcssysid.ToString(CultureInfo.InvariantCulture);
+            };
             TXT_GcsMavId.Leave += (s, e) => ApplyToolbarGcsIdFromInput();
             TXT_GcsMavId.KeyDown += (s, e) =>
             {
@@ -2385,7 +2389,7 @@ namespace MissionPlanner
             if (gcsIdEditing)
                 return;
 
-            var text = MAVLinkInterface.gcssysid.ToString(CultureInfo.InvariantCulture);
+            var text = $"GCS ID: {MAVLinkInterface.gcssysid.ToString(CultureInfo.InvariantCulture)}";
             if (InvokeRequired)
                 BeginInvoke((Action)delegate { TXT_GcsMavId.Text = text; });
             else
@@ -2397,7 +2401,8 @@ namespace MissionPlanner
             if (TXT_GcsMavId == null || !TXT_GcsMavId.Enabled)
                 return;
 
-            if (byte.TryParse(TXT_GcsMavId.Text, out var gcsId))
+            var candidate = new string(TXT_GcsMavId.Text.Where(char.IsDigit).ToArray());
+            if (byte.TryParse(candidate, out var gcsId))
             {
                 MAVLinkInterface.gcssysid = gcsId;
                 Settings.Instance["gcsid"] = gcsId.ToString(CultureInfo.InvariantCulture);
