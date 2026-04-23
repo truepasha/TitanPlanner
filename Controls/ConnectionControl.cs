@@ -64,7 +64,7 @@ namespace MissionPlanner.Controls
             var sysLeft = linkLabel1.Right + 10;
             var fullWidth = Math.Max(120, rowRight - sysLeft);
             cmb_sysid.Left = sysLeft;
-            cmb_sysid.Width = Math.Max(120, (int)(fullWidth * 0.75)); // requested: reduce width by 25%
+            cmb_sysid.Width = fullWidth;
         }
 
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
