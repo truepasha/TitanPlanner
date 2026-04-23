@@ -2410,12 +2410,6 @@ namespace MissionPlanner
             var joystickHz = Math.Max(10, Settings.Instance.GetInt32("joystick_rate_hz", 25));
             var rate = 1000f / joystickHz;
             int count = 0;
-            var stickIdleRate = 200f; // 5Hz, aligned with QGC idle-axis behavior
-            short lastStick1 = 0;
-            short lastStick2 = 0;
-            short lastStick3 = 0;
-            short lastStick4 = 0;
-            var firstStickSample = true;
 
             DateTime lastratechange = DateTime.Now;
 
@@ -2522,17 +2516,7 @@ namespace MissionPlanner
                                     rc.chan18_raw = (ushort) MainV2.comPort.MAV.cs.rcoverridech18;
 
                                 var now = DateTime.Now;
-                                var currentStick1 = (short) rc.chan1_raw;
-                                var currentStick2 = (short) rc.chan2_raw;
-                                var currentStick3 = (short) rc.chan3_raw;
-                                var currentStick4 = (short) rc.chan4_raw;
-                                var sticksActive = firstStickSample ||
-                                                   Math.Abs(currentStick1 - lastStick1) > 2 ||
-                                                   Math.Abs(currentStick2 - lastStick2) > 2 ||
-                                                   Math.Abs(currentStick3 - lastStick3) > 2 ||
-                                                   Math.Abs(currentStick4 - lastStick4) > 2;
-                                var currentStickRate = sticksActive ? rate : stickIdleRate;
-                                var sticksDue = lastjoystick.AddMilliseconds(currentStickRate) < now;
+                                var sticksDue = lastjoystick.AddMilliseconds(rate) < now;
                                 var auxDue = lastjoystickAux.AddMilliseconds(50) < now; // legacy MP rate for aux channels
 
                                 if (sticksDue || auxDue)
@@ -2607,11 +2591,6 @@ namespace MissionPlanner
                                                 comPort.sendPacket(rcSticks, rcSticks.target_system, rcSticks.target_component);
                                             }
                                             lastjoystick = now;
-                                            lastStick1 = currentStick1;
-                                            lastStick2 = currentStick2;
-                                            lastStick3 = currentStick3;
-                                            lastStick4 = currentStick4;
-                                            firstStickSample = false;
                                         }
 
                                         if (auxDue && (isUdpLink || comPort.BaseStream.BytesToWrite < 500))

@@ -99,18 +99,25 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             SuspendLayout();
 
+            var scrollHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true
+            };
+
             layoutRoot = new TableLayoutPanel
             {
                 Name = "layoutRoot",
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
                 Padding = new Padding(10),
                 Margin = new Padding(0),
                 ColumnCount = 2,
                 RowCount = 4
             };
-            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            layoutRoot.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layoutRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -135,7 +142,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             layoutRoot.SetColumnSpan(grpSpeech, 2);
 
             Controls.Clear();
-            Controls.Add(layoutRoot);
+            scrollHost.Controls.Add(layoutRoot);
+            Controls.Add(scrollHost);
 
             ResizeGroupBoxes();
 
@@ -149,14 +157,14 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 return;
             }
 
-            var width = layoutRoot.ClientSize.Width - layoutRoot.Padding.Horizontal;
-            var columnWidth = Math.Min(560, Math.Max(280, (width - 20) / 2));
+            var width = Math.Max(700, Parent?.ClientSize.Width ?? layoutRoot.ClientSize.Width);
+            var columnWidth = 540;
 
             foreach (Control child in layoutRoot.Controls)
             {
                 if (width > 0)
                 {
-                    var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? Math.Min(1140, Math.Max(560, width - 10)) : columnWidth;
+                    var targetWidth = child == layoutRoot.GetControlFromPosition(0, 3) ? (columnWidth * 2 + 20) : columnWidth;
                     child.MinimumSize = new Size(targetWidth, 0);
                     child.MaximumSize = new Size(targetWidth, 0);
                     child.Width = targetWidth;
