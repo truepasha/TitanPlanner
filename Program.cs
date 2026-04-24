@@ -155,11 +155,11 @@ namespace MissionPlanner
 
         private static void HandleMissionPlannerPlusUpgrade()
         {
-            // Check for MissionPlanner Plus edition marker
+            // Check for MissionPlanner-Plus edition marker
             if (Settings.Instance["mpplus_edition"] == null)
             {
-                // Set MissionPlanner Plus default theme
-                Settings.Instance["theme"] = "mpplus.mpsystheme";
+                // Set MissionPlanner-Plus default theme
+                Settings.Instance["theme"] = "BurntKermit.mpsystheme";
 
                 // Show tabs by default
                 Settings.Instance["displayParamsTab"] = "true";
@@ -172,6 +172,17 @@ namespace MissionPlanner
             }
         }
 
+
+        private static string GetDisplayVersion()
+        {
+            var versionParts = Application.ProductVersion.Split('.');
+
+            if (versionParts.Length >= 3)
+                return $"{versionParts[0]}.{versionParts[1]}.{versionParts[2]}";
+
+            return Application.ProductVersion;
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Start(string[] args)
         {
@@ -179,9 +190,9 @@ namespace MissionPlanner
             Program.args = args;
             Console.WriteLine(
                 "If your error is about Microsoft.DirectX.DirectInput, please install the latest directx redist from here http://www.microsoft.com/en-us/download/details.aspx?id=35 \n\n");
-            Console.WriteLine("Debug under mono    MONO_LOG_LEVEL=debug mono MissionPlanner.exe");
+            Console.WriteLine("Debug under mono    MONO_LOG_LEVEL=debug mono MissionPlanner-Plus.exe");
             Console.WriteLine("To fix any filename case issues under mono use    export MONO_IOMAP=drive:case");
-            Console.WriteLine("for pinvoke      MONO_LOG_LEVEL=debug MONO_LOG_MASK=dll mono MissionPlanner.exe");
+            Console.WriteLine("for pinvoke      MONO_LOG_LEVEL=debug MONO_LOG_MASK=dll mono MissionPlanner-Plus.exe");
 
             Console.WriteLine("watch -n 1 ls -l /proc/$(pidof mono)/fd");
             Console.WriteLine("watch -n 1 lsof -p $(pidof mono)");
@@ -256,7 +267,7 @@ namespace MissionPlanner
                 return;
             }
 
-            name = "MissionPlanner Plus";
+            name = "MissionPlanner-Plus";
 
             try
             {
@@ -332,16 +343,13 @@ namespace MissionPlanner
                 if (File.Exists(Settings.GetRunningDirectory() + "custom.mpsystheme"))
                     Settings.Instance["theme"] = "custom.mpsystheme";
                 else
-                    Settings.Instance["theme"] = "mpplus.mpsystheme";
+                    Settings.Instance["theme"] = "BurntKermit.mpsystheme";
             }
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
 
             Splash = new MissionPlanner.Splash();
 
-            string strVersion = File.Exists("version.txt")
-                ? File.ReadAllText("version.txt")
-                : System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            Splash.Text = name + " " + Application.ProductVersion + " build " + strVersion;
+            Splash.Text = $"{name} (v{GetDisplayVersion()})";
             Console.WriteLine("Splash.Show()");
             Splash.Show();
 
