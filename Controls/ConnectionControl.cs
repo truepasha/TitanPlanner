@@ -66,7 +66,10 @@ namespace MissionPlanner.Controls
         private void LayoutLinkStatsRow()
         {
             var desiredSysFieldWidth = Math.Max(180, TextRenderer.MeasureText(cmb_sysid.Text ?? string.Empty, cmb_sysid.Font).Width + 30);
-            var desiredControlWidth = Math.Max(MinimumSize.Width, desiredSysFieldWidth + 120);
+            var leftLabelWidth = Math.Max(
+                lblGcsId.GetPreferredSize(Size.Empty).Width,
+                linkLabel1.GetPreferredSize(Size.Empty).Width);
+            var desiredControlWidth = Math.Max(MinimumSize.Width, desiredSysFieldWidth + leftLabelWidth + (LayoutPadding * 2) + LayoutSpacing);
             if (Width < desiredControlWidth)
             {
                 Width = Math.Min(420, desiredControlWidth);
@@ -74,31 +77,33 @@ namespace MissionPlanner.Controls
 
             var rowHeight = Math.Max(cmb_Connection.Height, cmb_Baud.Height);
             var top = LayoutPadding;
-            var contentWidth = Math.Max(200, Width - (LayoutPadding * 2));
+            var contentWidth = Math.Max(220, Width - (LayoutPadding * 2));
+            var fieldsLeft = LayoutPadding + leftLabelWidth + LayoutSpacing;
+            var fieldsWidth = Math.Max(180, (LayoutPadding + contentWidth) - fieldsLeft);
 
-            var col1Width = Math.Max(90, lblGcsId.GetPreferredSize(Size.Empty).Width + 6);
-            var col3Width = Math.Max(90, cmb_Baud.Width);
-            var col2Width = Math.Max(80, contentWidth - col1Width - col3Width - (LayoutSpacing * 2));
+            var baudWidth = Math.Max(90, (int)(fieldsWidth * 0.42));
+            var linkTypeWidth = Math.Max(90, fieldsWidth - baudWidth - LayoutSpacing);
+            baudWidth = Math.Max(90, fieldsWidth - linkTypeWidth - LayoutSpacing);
 
             lblGcsId.Left = LayoutPadding;
             lblGcsId.Top = top + (rowHeight - lblGcsId.Height) / 2;
 
-            cmb_Connection.Left = lblGcsId.Right + LayoutSpacing;
+            cmb_Connection.Left = fieldsLeft;
             cmb_Connection.Top = top;
-            cmb_Connection.Width = col2Width;
+            cmb_Connection.Width = linkTypeWidth;
 
             cmb_Baud.Left = cmb_Connection.Right + LayoutSpacing;
             cmb_Baud.Top = top;
-            cmb_Baud.Width = col3Width;
+            cmb_Baud.Width = baudWidth;
 
             var secondRowTop = cmb_Connection.Bottom + 2;
             linkLabel1.AutoSize = true;
             linkLabel1.Left = LayoutPadding;
             linkLabel1.Top = secondRowTop + (rowHeight - linkLabel1.Height) / 2;
 
-            cmb_sysid.Left = lblGcsId.Right + LayoutSpacing;
+            cmb_sysid.Left = fieldsLeft;
             cmb_sysid.Top = secondRowTop;
-            cmb_sysid.Width = Math.Max(80, (LayoutPadding + contentWidth) - cmb_sysid.Left);
+            cmb_sysid.Width = fieldsWidth;
             cmb_sysid.DropDownWidth = Math.Max(cmb_sysid.Width, desiredSysFieldWidth);
             Height = cmb_sysid.Bottom + LayoutPadding;
         }
