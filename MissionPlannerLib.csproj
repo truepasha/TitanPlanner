@@ -633,9 +633,6 @@
     <None Update="HighContrast.mpsystheme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="TitanDynamics.mpsystheme">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="hud.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -651,7 +648,7 @@
     <None Update="mavutil.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="mpdesktop.ico">
+    <None Update="mpplus_icon.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="ParameterFactMetaData.xml">

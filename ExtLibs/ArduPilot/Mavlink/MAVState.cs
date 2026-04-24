@@ -156,6 +156,8 @@ namespace MissionPlanner
 
         internal byte[] signingKey;
 
+        public byte[] SigningKey => signingKey;
+
         /// <summary>
         /// are we signing outgoing packets, and checking incomming packet signatures
         /// </summary>

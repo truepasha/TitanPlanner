@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Mission Planner - Titan Dynamics Edition")]
+[assembly: AssemblyTitle("MissionPlanner-Plus")]
 [assembly: AssemblyDescription("Developed with love by Mohammad Adib and Claude")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Michael Oborne & Mohammad Adib")]
-[assembly: AssemblyProduct("Mission Planner - Titan Dynamics Edition")]
+[assembly: AssemblyProduct("MissionPlanner-Plus")]
 [assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -28,5 +28,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("1.3.*")]
-[assembly: AssemblyFileVersion("1.3.83")]
+[assembly: AssemblyVersion("1.0.*")]
+[assembly: AssemblyFileVersion("1.0.0")]
