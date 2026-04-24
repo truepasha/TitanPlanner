@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -25,6 +26,10 @@ namespace MissionPlanner.Joystick
         public static PlatformID pid = Environment.OSVersion.Platform;
 
         public bool manual_control = false;
+        public const int DefaultStickRateHz = 16;
+        public const string PollRateSettingKey = "joystick_poll_rate_hz";
+        public static readonly int[] SupportedStickRatesHz = { DefaultStickRateHz, 25, 50, 100, 200 };
+        private int _pollRateHz = DefaultStickRateHz;
 
         string joystickconfigbutton = "joystickbuttons.xml";
         string joystickconfigaxis = "joystickaxis.xml";
@@ -62,6 +67,7 @@ namespace MissionPlanner.Joystick
         public JoystickBase(Func<MAVLinkInterface> currentInterface)
         {
             this._Interface = currentInterface;
+            PollRateHz = GetConfiguredPollRateHz();
 
             this._context = SynchronizationContext.Current;
             if (_context == null)
@@ -1013,7 +1019,7 @@ namespace MissionPlanner.Joystick
             System.Threading.Thread t11 = new System.Threading.Thread(new System.Threading.ThreadStart(mainloop))
             {
                 Name = "Joystick loop",
-                Priority = System.Threading.ThreadPriority.AboveNormal,
+                Priority = System.Threading.ThreadPriority.Normal,
                 IsBackground = true
             };
             t11.Start();
@@ -1024,16 +1030,56 @@ namespace MissionPlanner.Joystick
         public abstract bool IsJoystickValid();
         public abstract IMyJoystickState GetCurrentState();
 
+        public int PollRateHz
+        {
+            get => _pollRateHz;
+            set => _pollRateHz = NormalizePollRateHz(value);
+        }
+
+        public int PollIntervalMs => Math.Max(1, (int)Math.Round(1000.0 / PollRateHz));
+
+        public static int NormalizePollRateHz(int rateHz)
+        {
+            if (rateHz == 20)
+                return DefaultStickRateHz;
+
+            if (SupportedStickRatesHz.Contains(rateHz))
+                return rateHz;
+
+            return DefaultStickRateHz;
+        }
+
+        public static int GetConfiguredPollRateHz()
+        {
+            try
+            {
+                if (Settings.Instance.ContainsKey(PollRateSettingKey) &&
+                    int.TryParse(Settings.Instance[PollRateSettingKey]?.ToString(), out var rate))
+                    return NormalizePollRateHz(rate);
+            }
+            catch
+            {
+            }
+
+            return DefaultStickRateHz;
+        }
+
         /// <summary>
         /// Updates the rcoverride values and controls the mode changes
         /// </summary>
         protected virtual void mainloop()
         {
+            var nextTick = Stopwatch.GetTimestamp();
+
             while (enabled && IsJoystickValid())
             {
                 try
                 {
-                    System.Threading.Thread.Sleep(50);
+                    var intervalTicks = (long)(Stopwatch.Frequency * (PollIntervalMs / 1000.0));
+                    if (Stopwatch.GetTimestamp() - nextTick > intervalTicks * 4)
+                        nextTick = Stopwatch.GetTimestamp();
+                    nextTick += intervalTicks;
+                    WaitUntil(nextTick, intervalTicks);
                     //joystick stuff
                     state = GetCurrentState();
 
@@ -1143,6 +1189,42 @@ namespace MissionPlanner.Joystick
                 {
                     log.Info("Joystick thread error " + ex.ToString());
                 } // so we cant fall out
+            }
+        }
+
+        private static void WaitUntil(long targetTick, long intervalTicks)
+        {
+            // For high rates (e.g. 100/200Hz), Thread.Sleep(1) can be quantized by OS timer
+            // and collapse effective rate to ~62.5Hz. Use yield/spin in that regime.
+            bool highRate = intervalTicks <= (Stopwatch.Frequency / 120);
+
+            while (true)
+            {
+                var now = Stopwatch.GetTimestamp();
+                var remainingTicks = targetTick - now;
+                if (remainingTicks <= 0)
+                    return;
+
+                if (!highRate)
+                {
+                    var remainingMs = remainingTicks * 1000.0 / Stopwatch.Frequency;
+                    if (remainingMs > 2)
+                    {
+                        Thread.Sleep(1);
+                        continue;
+                    }
+                }
+
+                if (highRate)
+                {
+                    Thread.Sleep(0);
+                    Thread.SpinWait(20);
+                }
+                else
+                {
+                    Thread.Yield();
+                    Thread.SpinWait(100);
+                }
             }
         }
 
