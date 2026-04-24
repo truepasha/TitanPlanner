@@ -9,7 +9,7 @@
     <Company>Michael Oborne</Company>
     <Product>MissionPlanner-Plus</Product>
     <Description>MissionPlanner-Plus ground control station for ArduPilot</Description>
-    <Copyright>Copyright © Michael Oborne 2010-2024</Copyright>
+    <Copyright>Copyright © Michael Oborne 2010-2026</Copyright>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>

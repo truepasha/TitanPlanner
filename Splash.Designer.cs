@@ -29,57 +29,45 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Splash));
-            this.label1 = new System.Windows.Forms.Label();
             this.TXT_version = new System.Windows.Forms.Label();
             this.startupImage = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.startupImage)).BeginInit();
             this.SuspendLayout();
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.BackColor = System.Drawing.Color.Transparent;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.Color.OliveDrab;
-            this.label1.Location = new System.Drawing.Point(22, 358);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(364, 17);
-            this.label1.TabIndex = 0;
-            this.label1.Tag = "custom";
-            this.label1.Text = "by Michael Oborne";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.TopRight;
-            // 
             // TXT_version
             // 
             this.TXT_version.BackColor = System.Drawing.Color.Transparent;
+            this.TXT_version.Font = new System.Drawing.Font("Cambria", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.TXT_version.ForeColor = System.Drawing.Color.White;
-            this.TXT_version.Location = new System.Drawing.Point(22, 333);
+            this.TXT_version.Location = new System.Drawing.Point(467, 366);
             this.TXT_version.Name = "TXT_version";
-            this.TXT_version.Size = new System.Drawing.Size(155, 25);
+            this.TXT_version.Size = new System.Drawing.Size(121, 25);
             this.TXT_version.TabIndex = 1;
             this.TXT_version.Text = "Version: ";
-            this.TXT_version.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.TXT_version.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.TXT_version.Click += new System.EventHandler(this.TXT_version_Click);
             // 
             // startupImage
             // 
             this.startupImage.BackColor = System.Drawing.Color.Transparent;
+            this.startupImage.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.startupImage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.startupImage.Image = ((System.Drawing.Image)(resources.GetObject("startupImage.Image")));
             this.startupImage.Location = new System.Drawing.Point(0, 0);
             this.startupImage.Name = "startupImage";
-            this.startupImage.Size = new System.Drawing.Size(660, 400);
+            this.startupImage.Size = new System.Drawing.Size(600, 400);
             this.startupImage.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.startupImage.TabIndex = 2;
             this.startupImage.TabStop = false;
+            this.startupImage.Click += new System.EventHandler(this.startupImage_Click_1);
             // 
             // Splash
             // 
             this.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImage")));
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ClientSize = new System.Drawing.Size(660, 400);
+            this.ClientSize = new System.Drawing.Size(600, 400);
             this.ControlBox = false;
             this.Controls.Add(this.TXT_version);
-            this.Controls.Add(this.label1);
             this.Controls.Add(this.startupImage);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -92,14 +80,11 @@
             this.TopMost = true;
             ((System.ComponentModel.ISupportInitialize)(this.startupImage)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label TXT_version;
         private System.Windows.Forms.PictureBox startupImage;
+        private System.Windows.Forms.Label TXT_version;
     }
 }

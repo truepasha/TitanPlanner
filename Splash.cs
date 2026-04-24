@@ -16,9 +16,6 @@ namespace MissionPlanner
 
             TXT_version.Text = "Version: v" + Application.ProductVersion; // +" Build " + strVersion;
 
-            // Use theme color for bottom line instead of hardcoded green
-            label1.ForeColor = ThemeManager.BannerColor2;
-
             var customSplash = Path.Combine(Settings.GetRunningDirectory(), "splash.png");
             if (File.Exists(customSplash))
             {
@@ -28,6 +25,21 @@ namespace MissionPlanner
             Console.WriteLine(strVersion);
 
             Console.WriteLine("Splash .ctor");
+        }
+
+        private void TXT_version_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void startupImage_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void startupImage_Click_1(object sender, EventArgs e)
+        {
+
         }
     }
 }
