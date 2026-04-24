@@ -17,7 +17,7 @@ namespace MissionPlanner.Utilities
     {
         static Settings _instance;
 
-        public static string AppConfigName { get; set; } = "MissionPlanner Plus";
+        public static string AppConfigName { get; set; } = "MissionPlanner-Plus";
 
         public static Settings Instance
         {
@@ -346,7 +346,7 @@ namespace MissionPlanner.Utilities
             return config.ContainsKey(key);
         }
 
-        public string UserAgent { get; set; } = "MissionPlanner Plus";
+        public string UserAgent { get; set; } = "MissionPlanner-Plus";
         
         public string ComPort
         {

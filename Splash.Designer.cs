@@ -88,7 +88,7 @@
             this.MinimizeBox = false;
             this.Name = "Splash";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "MissionPlanner Plus";
+            this.Text = "MissionPlanner-Plus";
             this.TopMost = true;
             ((System.ComponentModel.ISupportInitialize)(this.startupImage)).EndInit();
             this.ResumeLayout(false);

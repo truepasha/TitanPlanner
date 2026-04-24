@@ -155,10 +155,10 @@ namespace MissionPlanner
 
         private static void HandleMissionPlannerPlusUpgrade()
         {
-            // Check for MissionPlanner Plus edition marker
+            // Check for MissionPlanner-Plus edition marker
             if (Settings.Instance["mpplus_edition"] == null)
             {
-                // Set MissionPlanner Plus default theme
+                // Set MissionPlanner-Plus default theme
                 Settings.Instance["theme"] = "BurntKermit.mpsystheme";
 
                 // Show tabs by default
