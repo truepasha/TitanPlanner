@@ -23,8 +23,8 @@ namespace MissionPlanner.Controls
                 ShowLinkStats?.Invoke(this, EventArgs.Empty);
             };
             Resize += (sender, args) => LayoutLinkStatsRow();
-            MinimumSize = new Size(260, 48);
-            Size = new Size(260, 48);
+            MinimumSize = new Size(300, 48);
+            Size = new Size(300, 48);
             UpdateGcsIdLabel();
             LayoutLinkStatsRow();
         }
@@ -65,6 +65,13 @@ namespace MissionPlanner.Controls
 
         private void LayoutLinkStatsRow()
         {
+            var desiredSysFieldWidth = Math.Max(180, TextRenderer.MeasureText(cmb_sysid.Text ?? string.Empty, cmb_sysid.Font).Width + 30);
+            var desiredControlWidth = Math.Max(MinimumSize.Width, desiredSysFieldWidth + 120);
+            if (Width < desiredControlWidth)
+            {
+                Width = Math.Min(420, desiredControlWidth);
+            }
+
             var rowHeight = Math.Max(cmb_Connection.Height, cmb_Baud.Height);
             var top = LayoutPadding;
             var contentWidth = Math.Max(200, Width - (LayoutPadding * 2));
@@ -92,6 +99,7 @@ namespace MissionPlanner.Controls
             cmb_sysid.Left = lblGcsId.Right + LayoutSpacing;
             cmb_sysid.Top = secondRowTop;
             cmb_sysid.Width = Math.Max(80, (LayoutPadding + contentWidth) - cmb_sysid.Left);
+            cmb_sysid.DropDownWidth = Math.Max(cmb_sysid.Width, desiredSysFieldWidth);
             Height = cmb_sysid.Bottom + LayoutPadding;
         }
 
