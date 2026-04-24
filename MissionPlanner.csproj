@@ -808,9 +808,6 @@
     <Content Include="mpplus_icon.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="mpplus_icon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="splash.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

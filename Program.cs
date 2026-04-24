@@ -59,10 +59,7 @@ namespace MissionPlanner
         /// </summary>
         public static Image Logo2 = null;
 
-        /// <summary>
-        /// icon
-        /// </summary>
-        public static Image IconFile = null;
+        public static Icon WindowIcon = null;
 
         public static Splash Splash;
 
@@ -288,19 +285,15 @@ namespace MissionPlanner
             if (File.Exists(Settings.GetRunningDirectory() + "logo2.png"))
                 Logo2 = new Bitmap(Settings.GetRunningDirectory() + "logo2.png");
 
-            var brandedIconPath = Settings.GetRunningDirectory() + "mpplus_icon.png";
-            if (File.Exists(brandedIconPath))
+            var brandedIcoPath = Settings.GetRunningDirectory() + "mpplus_icon.ico";
+
+            if (File.Exists(brandedIcoPath))
             {
-                IconFile = new Bitmap(brandedIconPath);
-            }
-            else if (File.Exists(Settings.GetRunningDirectory() + "icon.png"))
-            {
-                // 128*128
-                IconFile = new Bitmap(Settings.GetRunningDirectory() + "icon.png");
+                WindowIcon = new Icon(brandedIcoPath);
             }
             else
             {
-                IconFile = MissionPlanner.Properties.Resources.mpdesktop.ToBitmap();
+                WindowIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             }
 
             try

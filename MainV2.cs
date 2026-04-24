@@ -1150,9 +1150,9 @@ namespace MissionPlanner
 #endif
 #endif
 
-            if (Program.IconFile != null)
+            if (Program.WindowIcon != null)
             {
-                this.Icon = Icon.FromHandle(((Bitmap) Program.IconFile).GetHicon());
+                this.Icon = Program.WindowIcon;
             }
 
             Application.DoEvents();
