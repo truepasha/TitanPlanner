@@ -757,7 +757,7 @@ namespace MissionPlanner
                 if (File.Exists($"{running_directory}custom.mpsystheme"))
                     Settings.Instance["theme"] = "custom.mpsystheme";
                 else
-                    Settings.Instance["theme"] = "mpplus.mpsystheme";
+                    Settings.Instance["theme"] = "BurntKermit.mpsystheme";
             }
 
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
@@ -863,11 +863,8 @@ namespace MissionPlanner
 
             MissionPlanner.Utilities.Tracking.cid = new Guid(Settings.Instance["guid"].ToString());
 
-            if (splash != null)
-            {
-                this.Text = splash?.Text;
-                titlebar = splash?.Text;
-            }
+            titlebar = BuildBaseWindowTitle();
+            this.Text = titlebar;
 
             if (!MONO) // windows only
             {
@@ -1176,6 +1173,16 @@ namespace MissionPlanner
         public void RefreshConnectionControlGcsId()
         {
             _connectionControl?.RefreshGcsIdLabel();
+        }
+
+        private static string BuildBaseWindowTitle()
+        {
+            var versionParts = Application.ProductVersion.Split('.');
+            var shortVersion = versionParts.Length >= 3
+                ? $"{versionParts[0]}.{versionParts[1]}.{versionParts[2]}"
+                : Application.ProductVersion;
+
+            return $"MissionPlanner-Plus (v{shortVersion})";
         }
 
         void comPort_MavChanged(object sender, EventArgs e)
@@ -1812,7 +1819,7 @@ namespace MissionPlanner
                     Settings.Instance[_connectionControl.CMB_serialport.Text.Replace(" ","_") + "_BAUD"] =
                         _connectionControl.CMB_baudrate.Text;
 
-                    this.Text = titlebar + " " + comPort.MAV.VersionString + " on " + comPort.MAV.SerialString;
+                    this.Text = titlebar + " -> " + comPort.MAV.VersionString + " on " + comPort.MAV.SerialString;
 
                     // refresh config window if needed
                     if (MyView.current != null && showui)

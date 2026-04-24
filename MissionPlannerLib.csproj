@@ -633,9 +633,6 @@
     <None Update="HighContrast.mpsystheme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="mpplus.mpsystheme">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="hud.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

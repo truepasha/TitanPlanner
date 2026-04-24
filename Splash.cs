@@ -22,7 +22,7 @@ namespace MissionPlanner
             var customSplash = Path.Combine(Settings.GetRunningDirectory(), "splash.png");
             if (File.Exists(customSplash))
             {
-                startupImage.ImageLocation = customSplash;
+                startupImage.Image = System.Drawing.Image.FromFile(customSplash);
             }
 
             Console.WriteLine(strVersion);

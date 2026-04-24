@@ -19,9 +19,12 @@ namespace MissionPlanner
         public static CultureInfo GetConfigLang()
         {
             if (Settings.Instance["language"] == null)
-                return CultureInfo.CurrentUICulture;
-            else
-                return CultureInfoEx.GetCultureInfo(Settings.Instance["language"]);
+            {
+                Settings.Instance["language"] = "en-US";
+                return CultureInfoEx.GetCultureInfo("en-US");
+            }
+
+            return CultureInfoEx.GetCultureInfo(Settings.Instance["language"]);
         }
     }
 }
