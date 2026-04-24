@@ -153,13 +153,13 @@ namespace MissionPlanner
             return string.Concat(filename.Split(Path.GetInvalidFileNameChars()));
         }
 
-        private static void HandleTDEditionUpgrade()
+        private static void HandleMissionPlannerPlusUpgrade()
         {
-            // Check for Titan Dynamics edition - if not set, this is a new install or upgrade from original Mission Planner
-            if (Settings.Instance["td_edition"] == null)
+            // Check for MissionPlanner Plus edition marker
+            if (Settings.Instance["mpplus_edition"] == null)
             {
-                // Set Titan Dynamics default theme
-                Settings.Instance["theme"] = "titandynamics.mpsystheme";
+                // Set MissionPlanner Plus default theme
+                Settings.Instance["theme"] = "mpplus.mpsystheme";
 
                 // Show tabs by default
                 Settings.Instance["displayParamsTab"] = "true";
@@ -167,7 +167,7 @@ namespace MissionPlanner
                 Settings.Instance["displayTuningTab"] = "true";
                 Settings.Instance["displayInspectorTab"] = "true";
 
-                Settings.Instance["td_edition"] = "true";
+                Settings.Instance["mpplus_edition"] = "true";
                 Settings.Instance.Save();
             }
         }
@@ -175,7 +175,7 @@ namespace MissionPlanner
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Start(string[] args)
         {
-            HandleTDEditionUpgrade();
+            HandleMissionPlannerPlusUpgrade();
             Program.args = args;
             Console.WriteLine(
                 "If your error is about Microsoft.DirectX.DirectInput, please install the latest directx redist from here http://www.microsoft.com/en-us/download/details.aspx?id=35 \n\n");
@@ -256,7 +256,7 @@ namespace MissionPlanner
                 return;
             }
 
-            name = "Mission Planner - Titan Dynamics Edition";
+            name = "MissionPlanner Plus";
 
             try
             {
@@ -277,7 +277,12 @@ namespace MissionPlanner
             if (File.Exists(Settings.GetRunningDirectory() + "logo2.png"))
                 Logo2 = new Bitmap(Settings.GetRunningDirectory() + "logo2.png");
 
-            if (File.Exists(Settings.GetRunningDirectory() + "icon.png"))
+            var brandedIconPath = Settings.GetRunningDirectory() + "mpplus_icon.png";
+            if (File.Exists(brandedIconPath))
+            {
+                IconFile = new Bitmap(brandedIconPath);
+            }
+            else if (File.Exists(Settings.GetRunningDirectory() + "icon.png"))
             {
                 // 128*128
                 IconFile = new Bitmap(Settings.GetRunningDirectory() + "icon.png");
@@ -327,7 +332,7 @@ namespace MissionPlanner
                 if (File.Exists(Settings.GetRunningDirectory() + "custom.mpsystheme"))
                     Settings.Instance["theme"] = "custom.mpsystheme";
                 else
-                    Settings.Instance["theme"] = "titandynamics.mpsystheme";
+                    Settings.Instance["theme"] = "mpplus.mpsystheme";
             }
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
 

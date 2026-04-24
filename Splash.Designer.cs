@@ -31,8 +31,8 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Splash));
             this.label1 = new System.Windows.Forms.Label();
             this.TXT_version = new System.Windows.Forms.Label();
-            this.titanLogo = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.titanLogo)).BeginInit();
+            this.startupImage = new System.Windows.Forms.PictureBox();
+            ((System.ComponentModel.ISupportInitialize)(this.startupImage)).BeginInit();
             this.SuspendLayout();
             // 
             // label1
@@ -60,17 +60,17 @@
             this.TXT_version.Text = "Version: ";
             this.TXT_version.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // titanLogo
+            // startupImage
             // 
-            this.titanLogo.BackColor = System.Drawing.Color.Transparent;
-            this.titanLogo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.titanLogo.Image = ((System.Drawing.Image)(resources.GetObject("titanLogo.Image")));
-            this.titanLogo.Location = new System.Drawing.Point(0, 0);
-            this.titanLogo.Name = "titanLogo";
-            this.titanLogo.Size = new System.Drawing.Size(660, 400);
-            this.titanLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.titanLogo.TabIndex = 2;
-            this.titanLogo.TabStop = false;
+            this.startupImage.BackColor = System.Drawing.Color.Transparent;
+            this.startupImage.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.startupImage.Image = ((System.Drawing.Image)(resources.GetObject("startupImage.Image")));
+            this.startupImage.Location = new System.Drawing.Point(0, 0);
+            this.startupImage.Name = "startupImage";
+            this.startupImage.Size = new System.Drawing.Size(660, 400);
+            this.startupImage.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.startupImage.TabIndex = 2;
+            this.startupImage.TabStop = false;
             // 
             // Splash
             // 
@@ -80,7 +80,7 @@
             this.ControlBox = false;
             this.Controls.Add(this.TXT_version);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.titanLogo);
+            this.Controls.Add(this.startupImage);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -88,9 +88,9 @@
             this.MinimizeBox = false;
             this.Name = "Splash";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Mission Planner";
+            this.Text = "MissionPlanner Plus";
             this.TopMost = true;
-            ((System.ComponentModel.ISupportInitialize)(this.titanLogo)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.startupImage)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -100,6 +100,6 @@
 
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label TXT_version;
-        private System.Windows.Forms.PictureBox titanLogo;
+        private System.Windows.Forms.PictureBox startupImage;
     }
 }

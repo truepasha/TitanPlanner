@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.IO;
 using System.Windows.Forms;
 using MissionPlanner.Utilities;
 
@@ -13,10 +14,16 @@ namespace MissionPlanner
 
             string strVersion = typeof(Splash).GetType().Assembly.GetName().Version.ToString();
 
-            TXT_version.Text = "Version: Titan " + Application.ProductVersion; // +" Build " + strVersion;
+            TXT_version.Text = "Version: v" + Application.ProductVersion; // +" Build " + strVersion;
 
             // Use theme color for bottom line instead of hardcoded green
             label1.ForeColor = ThemeManager.BannerColor2;
+
+            var customSplash = Path.Combine(Settings.GetRunningDirectory(), "splash.png");
+            if (File.Exists(customSplash))
+            {
+                startupImage.ImageLocation = customSplash;
+            }
 
             Console.WriteLine(strVersion);
 
