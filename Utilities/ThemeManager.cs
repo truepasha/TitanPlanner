@@ -471,8 +471,8 @@ namespace MissionPlanner.Utilities
             if (control is Form form)
             {
                 ApplyDarkModeToTitleBar(form);
-                if (Program.IconFile != null)
-                    form.Icon = Icon.FromHandle(((Bitmap)Program.IconFile).GetHicon());
+                if (Program.WindowIcon != null)
+                    form.Icon = Program.WindowIcon;
             }
         }
 
@@ -1097,8 +1097,8 @@ mc:Ignorable=""d""
                 {
                     ctl.BackColor = BGColor;
                     ctl.ForeColor = TextColor;
-                    if (Program.IconFile != null)
-                        ((Form)ctl).Icon = Icon.FromHandle(((Bitmap)Program.IconFile).GetHicon());
+                    if (Program.WindowIcon != null)
+                        ((Form)ctl).Icon = Program.WindowIcon;
                 }
                 else if (ctl.GetType() == typeof(RichTextBox))
                 {
@@ -1425,8 +1425,8 @@ mc:Ignorable=""d""
                 {
                     ctl.BackColor = BGColor;
                     ctl.ForeColor = TextColor;
-                    if (Program.IconFile != null)
-                        ((Form)ctl).Icon = Icon.FromHandle(((Bitmap)Program.IconFile).GetHicon());
+                    if (Program.WindowIcon != null)
+                        ((Form)ctl).Icon = Program.WindowIcon;
                 }
                 else if (ctl.GetType() == typeof(RichTextBox))
                 {
