@@ -1523,6 +1523,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             MAVLinkInterface.gcssysid = (byte)num_gcsid.Value;
             Settings.Instance["gcsid"] = num_gcsid.Value.ToString();
+            MainV2.instance?.RefreshConnectionControlGcsId();
         }
 
         private void CHK_params_bg_CheckedChanged(object sender, EventArgs e)

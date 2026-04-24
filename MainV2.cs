@@ -1173,6 +1173,11 @@ namespace MissionPlanner
             MainV2._connectionControl.UpdateSysIDS();
         }
 
+        public void RefreshConnectionControlGcsId()
+        {
+            _connectionControl?.RefreshGcsIdLabel();
+        }
+
         void comPort_MavChanged(object sender, EventArgs e)
         {
             log.Info($"Mav Changed {MainV2.comPort.MAV.sysid}");

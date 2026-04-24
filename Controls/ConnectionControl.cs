@@ -113,6 +113,12 @@ namespace MissionPlanner.Controls
             lblGcsId.Text = $"GCS ID: {MAVLinkInterface.gcssysid}";
         }
 
+        public void RefreshGcsIdLabel()
+        {
+            UpdateGcsIdLabel();
+            LayoutLinkStatsRow();
+        }
+
         private void cmb_Connection_DrawItem(object sender, DrawItemEventArgs e)
         {
             if (e.Index < 0)
