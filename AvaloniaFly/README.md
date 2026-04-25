@@ -11,4 +11,6 @@
 dotnet build AvaloniaFly/AvaloniaFly.csproj
 ```
 
+> Проєкт налаштований без `ImplicitUsings` і без file-scoped namespace у коді, щоб не ламати сумісність зі старішими toolchain/аналізаторами в основному репозиторії.
+
 Після білду покладіть `AvaloniaFly.exe`/`AvaloniaFly.dll` в папку `AvaloniaFly` поруч з основним MissionPlanner executable.
