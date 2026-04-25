@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AvaloniaFly.MainWindow"
+        Title="MissionPlanner FLY (Avalonia Beta)"
+        Width="1400"
+        Height="850"
+        MinWidth="1024"
+        MinHeight="700">
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="2*,3*">
+    <Border Grid.Row="0" Grid.ColumnSpan="2" Background="#1E1E1E" Padding="12,8">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <TextBlock Text="FLY / Avalonia Beta" FontWeight="Bold" VerticalAlignment="Center"/>
+        <TextBlock Text="Поступова міграція UI: крок 1 (окремий FLY host)." Foreground="#9AA0A6" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="0" Margin="8" Background="#2B4AA6" CornerRadius="6">
+      <Grid>
+        <TextBlock Text="HUD (Avalonia host placeholder)" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="22"/>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="1" Margin="8" Background="#2A2A2A" CornerRadius="6">
+      <Grid>
+        <TextBlock Text="Map panel (Avalonia host placeholder)" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="22"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

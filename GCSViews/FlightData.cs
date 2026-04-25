@@ -594,6 +594,7 @@ namespace MissionPlanner.GCSViews
 
         private CheckBox CB_3dmap;
         private CheckBox CB_modernMap;
+        private CheckBox CB_avaloniaFly;
         private Panel modernMapHost;
 
         // Split ratio persistence
@@ -676,6 +677,20 @@ namespace MissionPlanner.GCSViews
             panel1.Resize += (s, e) => Position3DMapCheckbox();
         }
 
+        private void AddAvaloniaFlyCheckbox()
+        {
+            CB_avaloniaFly = new CheckBox
+            {
+                Text = "Avalonia FLY (beta)",
+                AutoSize = true
+            };
+            CB_avaloniaFly.CheckedChanged += CB_avaloniaFly_CheckedChanged;
+
+            panel1.Controls.Add(CB_avaloniaFly);
+            Position3DMapCheckbox();
+            panel1.Resize += (s, e) => Position3DMapCheckbox();
+        }
+
         private void Position3DMapCheckbox()
         {
             if (CB_3dmap == null || CB_params == null || CHK_autopan == null)
@@ -685,7 +700,15 @@ namespace MissionPlanner.GCSViews
             if (CB_modernMap != null)
             {
                 CB_modernMap.Location = new Point(CB_3dmap.Right + 10, CB_3dmap.Top);
-                CHK_autopan.Location = new Point(CB_modernMap.Right + 10, CHK_autopan.Top);
+                if (CB_avaloniaFly != null)
+                {
+                    CB_avaloniaFly.Location = new Point(CB_modernMap.Right + 10, CB_modernMap.Top);
+                    CHK_autopan.Location = new Point(CB_avaloniaFly.Right + 10, CHK_autopan.Top);
+                }
+                else
+                {
+                    CHK_autopan.Location = new Point(CB_modernMap.Right + 10, CHK_autopan.Top);
+                }
             }
             else
             {
@@ -757,6 +780,7 @@ namespace MissionPlanner.GCSViews
             MoveMapControlsAboveTuning();
             Add3DMapCheckbox();
             AddModernMapCheckbox();
+            AddAvaloniaFlyCheckbox();
 
             log.Info("Components Done");
 
@@ -2809,6 +2833,56 @@ namespace MissionPlanner.GCSViews
             ToggleModernMapRenderer(CB_modernMap.Checked);
         }
 
+        private void CB_avaloniaFly_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.Instance["CB_avaloniaFly"] = CB_avaloniaFly.Checked.ToString();
+            if (!CB_avaloniaFly.Checked)
+                return;
+
+            if (!TryLaunchAvaloniaFlyHost())
+            {
+                CB_avaloniaFly.Checked = false;
+            }
+        }
+
+        private bool TryLaunchAvaloniaFlyHost()
+        {
+            try
+            {
+                var startupDir = AppDomain.CurrentDomain.BaseDirectory;
+                var exe = Path.Combine(startupDir, "AvaloniaFly", "AvaloniaFly.exe");
+                var dll = Path.Combine(startupDir, "AvaloniaFly", "AvaloniaFly.dll");
+
+                if (File.Exists(exe))
+                {
+                    Process.Start(new ProcessStartInfo(exe)
+                    {
+                        UseShellExecute = true
+                    });
+                    return true;
+                }
+
+                if (File.Exists(dll))
+                {
+                    Process.Start(new ProcessStartInfo("dotnet", $"\"{dll}\"")
+                    {
+                        UseShellExecute = false,
+                        WorkingDirectory = Path.GetDirectoryName(dll)
+                    });
+                    return true;
+                }
+
+                CustomMessageBox.Show("Avalonia FLY host is not built yet. Build `AvaloniaFly/AvaloniaFly.csproj` first.");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to launch Avalonia FLY host", ex);
+                CustomMessageBox.Show("Failed to launch Avalonia FLY host. See logs for details.");
+                return false;
+            }
+        }
+
         private bool IsModernMapRendererEnabled => CB_modernMap != null && CB_modernMap.Checked;
 
         private void ToggleModernMapRenderer(bool enable)
@@ -3966,6 +4040,9 @@ namespace MissionPlanner.GCSViews
 
             if (Settings.Instance["CB_modernMap"] != null)
                 CB_modernMap.Checked = Settings.Instance.GetBoolean("CB_modernMap");
+
+            if (Settings.Instance["CB_avaloniaFly"] != null)
+                CB_avaloniaFly.Checked = Settings.Instance.GetBoolean("CB_avaloniaFly");
 
             if (Settings.Instance.ContainsKey("HudSwap") && Settings.Instance["HudSwap"] == "true")
                 SwapHud1AndMap();
