@@ -1143,6 +1143,7 @@
     <Compile Remove="plugins\example9-hudonoff.cs" />
     <Compile Remove="plugins\generator.cs" />
     <Compile Remove="plugins\InitialParamsCalculator.cs" />
+    <Compile Remove="AvaloniaFly\**\*.*" />
     <Compile Remove="resedit\**\*.*" />
     <Compile Remove="resedit\Form1.Designer.cs" />
     <Compile Remove="resedit\Program.cs" />
