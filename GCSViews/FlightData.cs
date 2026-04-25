@@ -4841,6 +4841,13 @@ namespace MissionPlanner.GCSViews
                          tracklast.AddSeconds(Settings.Instance.GetDouble("FD_MapUpdateDelay", 0.3)) < DateTime.Now) ||
                         tracklast.AddSeconds(2) < DateTime.Now)
                     {
+                        if (gMapControl1 != null && gMapControl1.IsUserInteracting)
+                        {
+                            // Keep map interaction smooth: postpone expensive overlay refresh while user drags/zooms.
+                            tracklast = DateTime.Now;
+                            continue;
+                        }
+
                         // show disable joystick button
                         if (MainV2.joystick != null && MainV2.joystick.enabled)
                         {

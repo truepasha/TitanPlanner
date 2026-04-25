@@ -148,13 +148,16 @@ namespace MissionPlanner.Controls
                 StringFormat stringFormat = new StringFormat();
                 stringFormat.Alignment = StringAlignment.Center;
                 stringFormat.LineAlignment = StringAlignment.Center;
+                stringFormat.FormatFlags = StringFormatFlags.NoWrap;
+                stringFormat.Trimming = StringTrimming.EllipsisCharacter;
 
                 string display = this.Text;
                 int amppos = display.IndexOf('&');
                 if (amppos != -1)
                     display = display.Remove(amppos, 1);
 
-                gr.DrawString(display, this.Font, mybrush, outside, stringFormat);
+                var textBounds = Rectangle.Inflate(outside, -6, -2);
+                gr.DrawString(display, this.Font, mybrush, textBounds, stringFormat);
             }
             catch { }
 

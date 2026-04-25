@@ -23,6 +23,11 @@ namespace MissionPlanner.Controls
         string otherthread = "";
         int lastx = 0;
         int lasty = 0;
+        private DateTime _lastUserInteractionUtc = DateTime.MinValue;
+        private static readonly TimeSpan InteractionCooldown = TimeSpan.FromMilliseconds(250);
+
+        public bool IsUserInteracting => Core.IsDragging || (DateTime.UtcNow - _lastUserInteractionUtc) < InteractionCooldown;
+
         public myGMAP()
             : base()
         {
@@ -36,6 +41,8 @@ namespace MissionPlanner.Controls
 
         private void MyGMAP_GestureHappened(object sender, GestureEventArgs e)
         {
+            _lastUserInteractionUtc = DateTime.UtcNow;
+
             if(e.Operation == Gestures.Pan)
             {
                 p1.Position = e.FirstPointLL;
@@ -125,6 +132,8 @@ namespace MissionPlanner.Controls
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
+            _lastUserInteractionUtc = DateTime.UtcNow;
+
             if (!Core.IsDragging)
             {
                 // Calculate zoom change - standard delta is 120, so normalize
@@ -143,6 +152,8 @@ namespace MissionPlanner.Controls
         {
             try
             {
+                _lastUserInteractionUtc = DateTime.UtcNow;
+
                 var buffer = 1;
                 // try prevent alot of cpu usage
                 if (e.X >= lastx - buffer && e.X <= lastx + buffer && e.Y >= lasty - buffer && e.Y <= lasty + buffer)
@@ -157,6 +168,18 @@ namespace MissionPlanner.Controls
                 base.OnMouseMove(e);
             }
             catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            _lastUserInteractionUtc = DateTime.UtcNow;
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            _lastUserInteractionUtc = DateTime.UtcNow;
+            base.OnMouseUp(e);
         }
 
 
