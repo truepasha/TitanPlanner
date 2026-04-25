@@ -65,4 +65,4 @@
    git submodule update --init --recursive
    ```
 
-У цьому репо також прибрано форсування `AppendTargetFrameworkToOutputPath/AppendRuntimeIdentifierToOutputPath` у головному проєкті, а для `7zip`/`ZedGraph` вимкнено автогенерацію `TargetFrameworkAttribute`, щоб прибрати дублікати й збирати залежності у правильні шляхи.
+У цьому репо форсування `AppendTargetFrameworkToOutputPath/AppendRuntimeIdentifierToOutputPath` застосовується лише до головного exe, але не має ламати дочірні бібліотеки: для `7zip`/`ZedGraph`/`GDAL` додано локальні налаштування таргетів/виводу, щоб прибрати дублікати атрибутів і збирати залежності у правильні шляхи.
