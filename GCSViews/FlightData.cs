@@ -593,6 +593,8 @@ namespace MissionPlanner.GCSViews
         private Controls.StatusControl _statusControl;
 
         private CheckBox CB_3dmap;
+        private CheckBox CB_modernMap;
+        private Panel modernMapHost;
 
         // Split ratio persistence
         private const double MinSplitRatio = 0.2;
@@ -660,13 +662,35 @@ namespace MissionPlanner.GCSViews
             // Restore saved state
         }
 
+        private void AddModernMapCheckbox()
+        {
+            CB_modernMap = new CheckBox
+            {
+                Text = "Modern UI Map",
+                AutoSize = true
+            };
+            CB_modernMap.CheckedChanged += CB_modernMap_CheckedChanged;
+
+            panel1.Controls.Add(CB_modernMap);
+            Position3DMapCheckbox();
+            panel1.Resize += (s, e) => Position3DMapCheckbox();
+        }
+
         private void Position3DMapCheckbox()
         {
             if (CB_3dmap == null || CB_params == null || CHK_autopan == null)
                 return;
 
             CB_3dmap.Location = new Point(CB_params.Right + 10, CB_params.Top);
-            CHK_autopan.Location = new Point(CB_3dmap.Right + 10, CHK_autopan.Top);
+            if (CB_modernMap != null)
+            {
+                CB_modernMap.Location = new Point(CB_3dmap.Right + 10, CB_3dmap.Top);
+                CHK_autopan.Location = new Point(CB_modernMap.Right + 10, CHK_autopan.Top);
+            }
+            else
+            {
+                CHK_autopan.Location = new Point(CB_3dmap.Right + 10, CHK_autopan.Top);
+            }
         }
 
         private void SaveSplitRatio(SplitContainer split, string settingsKey)
@@ -732,6 +756,7 @@ namespace MissionPlanner.GCSViews
             InitializeComponent();
             MoveMapControlsAboveTuning();
             Add3DMapCheckbox();
+            AddModernMapCheckbox();
 
             log.Info("Components Done");
 
@@ -2768,10 +2793,71 @@ namespace MissionPlanner.GCSViews
             {
                 if (CB_tuning.Checked) CB_tuning.Checked = false;
                 if (CB_params.Checked) CB_params.Checked = false;
+                if (CB_modernMap != null && CB_modernMap.Checked) CB_modernMap.Checked = false;
             }
             Settings.Instance["CB_3dmap"] = CB_3dmap.Checked.ToString();
             Toggle3DMap(CB_3dmap.Checked);
             UpdateSplitContainerLayout();
+        }
+
+        private void CB_modernMap_CheckedChanged(object sender, EventArgs e)
+        {
+            if (CB_modernMap.Checked && CB_3dmap != null && CB_3dmap.Checked)
+                CB_3dmap.Checked = false;
+
+            Settings.Instance["CB_modernMap"] = CB_modernMap.Checked.ToString();
+            ToggleModernMapRenderer(CB_modernMap.Checked);
+        }
+
+        private bool IsModernMapRendererEnabled => CB_modernMap != null && CB_modernMap.Checked;
+
+        private void ToggleModernMapRenderer(bool enable)
+        {
+            if (gMapControl1 == null || map3DSplitContainer == null)
+                return;
+
+            if (enable)
+            {
+                if (modernMapHost == null || modernMapHost.IsDisposed)
+                {
+                    modernMapHost = new Panel
+                    {
+                        Dock = DockStyle.Fill,
+                        Name = "modernMapHost",
+                    };
+                    map3DSplitContainer.Panel1.Controls.Add(modernMapHost);
+                    modernMapHost.BringToFront();
+                }
+
+                if (map3DControl == null || map3DControl.IsDisposed)
+                {
+                    Dispose3DMap();
+                    map3DControl = new Map3D { Dock = DockStyle.Fill };
+                    ThemeManager.ApplyThemeTo(map3DControl);
+
+                    if (gMapControl1.Position.Lat != 0 && gMapControl1.Position.Lng != 0)
+                    {
+                        var pos = gMapControl1.Position;
+                        var terrainAlt = srtm.getAltitude(pos.Lat, pos.Lng).alt;
+                        map3DControl.LocationCenter = new PointLatLngAlt(pos.Lat, pos.Lng, terrainAlt + 100, "init");
+                    }
+                }
+
+                modernMapHost.Controls.Clear();
+                modernMapHost.Controls.Add(map3DControl);
+                modernMapHost.Visible = true;
+                gMapControl1.Visible = false;
+            }
+            else
+            {
+                if (modernMapHost != null)
+                {
+                    modernMapHost.Visible = false;
+                    modernMapHost.Controls.Clear();
+                }
+
+                gMapControl1.Visible = true;
+            }
         }
 
         public bool Is3DMapEnabled => CB_3dmap != null && CB_3dmap.Checked;
@@ -3867,6 +3953,9 @@ namespace MissionPlanner.GCSViews
             if (Settings.Instance["CB_3dmap"] != null)
                 CB_3dmap.Checked = Settings.Instance.GetBoolean("CB_3dmap");
 
+            if (Settings.Instance["CB_modernMap"] != null)
+                CB_modernMap.Checked = Settings.Instance.GetBoolean("CB_modernMap");
+
             if (Settings.Instance.ContainsKey("HudSwap") && Settings.Instance["HudSwap"] == "true")
                 SwapHud1AndMap();
 
@@ -4837,9 +4926,10 @@ namespace MissionPlanner.GCSViews
                     }
 
                     // update map - 0.3sec if connected , 2 sec if not connected
-                    if (((MainV2.comPort.BaseStream.IsOpen || MainV2.comPort.logreadmode) &&
-                         tracklast.AddSeconds(Settings.Instance.GetDouble("FD_MapUpdateDelay", 0.3)) < DateTime.Now) ||
-                        tracklast.AddSeconds(2) < DateTime.Now)
+                    if (!IsModernMapRendererEnabled &&
+                        (((MainV2.comPort.BaseStream.IsOpen || MainV2.comPort.logreadmode) &&
+                          tracklast.AddSeconds(Settings.Instance.GetDouble("FD_MapUpdateDelay", 0.3)) < DateTime.Now) ||
+                         tracklast.AddSeconds(2) < DateTime.Now))
                     {
                         if (gMapControl1 != null && gMapControl1.IsUserInteracting)
                         {

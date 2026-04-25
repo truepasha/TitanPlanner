@@ -8,6 +8,7 @@ using System.Windows.Forms;
 
 
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 
 namespace MissionPlanner.Controls
 {
@@ -157,11 +158,38 @@ namespace MissionPlanner.Controls
                     display = display.Remove(amppos, 1);
 
                 var textBounds = Rectangle.Inflate(outside, -6, -2);
-                gr.DrawString(display, this.Font, mybrush, textBounds, stringFormat);
+                gr.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+                Font drawFont = GetBestFitFont(gr, display, textBounds);
+                gr.DrawString(display, drawFont, mybrush, textBounds, stringFormat);
+
+                if (!ReferenceEquals(drawFont, this.Font))
+                    drawFont.Dispose();
             }
             catch { }
 
             inOnPaint = false;
+        }
+
+        private Font GetBestFitFont(Graphics gr, string text, Rectangle bounds)
+        {
+            if (string.IsNullOrEmpty(text) || bounds.Width <= 0 || bounds.Height <= 0)
+                return this.Font;
+
+            var current = this.Font;
+            if (gr.MeasureString(text, current).Width <= bounds.Width)
+                return current;
+
+            for (float size = this.Font.Size - 0.5f; size >= 7f; size -= 0.5f)
+            {
+                var candidate = new Font(this.Font.FontFamily, size, this.Font.Style, GraphicsUnit.Point);
+                if (gr.MeasureString(text, candidate).Width <= bounds.Width)
+                    return candidate;
+
+                candidate.Dispose();
+            }
+
+            return this.Font;
         }
 
         protected override void OnClick(EventArgs e)
