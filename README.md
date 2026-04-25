@@ -232,3 +232,5 @@ See [COPYING.txt](COPYING.txt) for details.
 * Run installer.bat
 * Run create.bat
 
+For a fork-friendly MSI workflow (manual GitHub Actions build + optional auto-release), see `BUILDING_MSI_UK.md`.
+

@@ -1,0 +1,121 @@
+name: Build MSI (Fork)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Git branch or tag to build'
+        required: true
+        default: 'master'
+      configuration:
+        description: 'Build configuration'
+        required: true
+        type: choice
+        options:
+          - Release
+          - Debug
+        default: Release
+      upload_release:
+        description: 'Upload to GitHub Release'
+        required: true
+        type: boolean
+        default: false
+      release_tag:
+        description: 'Release tag (required if upload_release=true)'
+        required: false
+        default: ''
+      release_name:
+        description: 'Release title (required if upload_release=true)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    runs-on: windows-2022
+    env:
+      MSI_NAME: TitanPlanner.msi
+      ZIP_NAME: TitanPlanner.zip
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Build solution
+        shell: pwsh
+        run: |
+          $msbuildPath = Split-Path (& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\Current\Bin\amd64\MSBuild.exe | Select-Object -First 1) -Parent
+          $env:PATH = $msbuildPath + ';' + $env:PATH
+          nuget locals all -clear
+          msbuild -v:m -restore -t:Build -p:Configuration=${{ inputs.configuration }} MissionPlanner.sln
+
+      - name: Package app folder + checksums
+        shell: pwsh
+        run: |
+          cd bin\${{ inputs.configuration }}\net461
+          gci plugins | ForEach-Object {
+            if (Test-Path $_.Name -PathType Leaf) { Remove-Item $_.FullName }
+          }
+          copy version.txt ..\..\..\
+          7z a -tzip ..\..\..\${{ env.ZIP_NAME }} *
+          cd ..
+          .\md5sum.exe net461 > ..\..\checksums.txt
+
+      - name: Create MSI
+        shell: pwsh
+        run: |
+          cd Msi
+          if (Test-Path installer.wxs) { Remove-Item installer.wxs }
+          & ".\net472\wix.exe" "..\bin\${{ inputs.configuration }}\net461"
+          & "$env:WIX\bin\candle.exe" installer.wxs -ext WiXNetFxExtension -ext WixDifxAppExtension -ext WixUIExtension.dll -ext WixUtilExtension -ext WixIisExtension
+          & "$env:WIX\bin\light.exe" installer.wixobj "$env:WIX\bin\difxapp_x86.wixlib" -sval -o ${{ env.MSI_NAME }} -ext WiXNetFxExtension -ext WixDifxAppExtension -ext WixUIExtension.dll -ext WixUtilExtension -ext WixIisExtension
+          Move-Item ${{ env.MSI_NAME }} ..\${{ env.MSI_NAME }}
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TitanPlanner-MSI-${{ inputs.configuration }}
+          path: ${{ env.MSI_NAME }}
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TitanPlanner-ZIP-${{ inputs.configuration }}
+          path: ${{ env.ZIP_NAME }}
+
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TitanPlanner-checksums-${{ inputs.configuration }}
+          path: |
+            checksums.txt
+            version.txt
+
+      - name: Validate release inputs
+        if: ${{ inputs.upload_release }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace("${{ inputs.release_tag }}") -or [string]::IsNullOrWhiteSpace("${{ inputs.release_name }}")) {
+            throw "release_tag and release_name are required when upload_release=true"
+          }
+
+      - name: Publish GitHub release
+        if: ${{ inputs.upload_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_name }}
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.ZIP_NAME }}
+            ${{ env.MSI_NAME }}
+            checksums.txt
+            version.txt
+            ChangeLog.txt
