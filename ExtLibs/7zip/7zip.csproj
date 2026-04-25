@@ -1,11 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AppendTargetFrameworkToOutputPath;AppendRuntimeIdentifierToOutputPath">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <ApplicationIcon />
-    <OutputType>Library</OutputType>
+    <OutputTypeEx>library</OutputTypeEx>
+    <StartupObject />
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <DebugType>portable</DebugType>
     <DebugSymbols>True</DebugSymbols>

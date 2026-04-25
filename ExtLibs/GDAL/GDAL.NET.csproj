@@ -1,7 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AppendTargetFrameworkToOutputPath;AppendRuntimeIdentifierToOutputPath">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net472</TargetFrameworks>
-    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <ApplicationIcon />
     <OutputTypeEx>library</OutputTypeEx>
     <StartupObject />

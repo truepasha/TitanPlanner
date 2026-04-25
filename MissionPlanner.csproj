@@ -122,11 +122,6 @@
       <SpecificVersion>False</SpecificVersion>
     </Reference>
   </ItemGroup>
-  <ItemDefinitionGroup>
-    <ProjectReference>
-      <GlobalPropertiesToRemove>AppendTargetFrameworkToOutputPath;AppendRuntimeIdentifierToOutputPath</GlobalPropertiesToRemove>
-    </ProjectReference>
-  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="ExtLibs\7zip\7zip.csproj" />
     <ProjectReference Include="ExtLibs\alglibnet\alglibnet.csproj" />
