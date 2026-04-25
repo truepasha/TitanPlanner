@@ -2818,35 +2818,46 @@ namespace MissionPlanner.GCSViews
 
             if (enable)
             {
-                if (modernMapHost == null || modernMapHost.IsDisposed)
+                try
                 {
-                    modernMapHost = new Panel
+                    if (modernMapHost == null || modernMapHost.IsDisposed)
                     {
-                        Dock = DockStyle.Fill,
-                        Name = "modernMapHost",
-                    };
-                    map3DSplitContainer.Panel1.Controls.Add(modernMapHost);
-                    modernMapHost.BringToFront();
-                }
-
-                if (map3DControl == null || map3DControl.IsDisposed)
-                {
-                    Dispose3DMap();
-                    map3DControl = new Map3D { Dock = DockStyle.Fill };
-                    ThemeManager.ApplyThemeTo(map3DControl);
-
-                    if (gMapControl1.Position.Lat != 0 && gMapControl1.Position.Lng != 0)
-                    {
-                        var pos = gMapControl1.Position;
-                        var terrainAlt = srtm.getAltitude(pos.Lat, pos.Lng).alt;
-                        map3DControl.LocationCenter = new PointLatLngAlt(pos.Lat, pos.Lng, terrainAlt + 100, "init");
+                        modernMapHost = new Panel
+                        {
+                            Dock = DockStyle.Fill,
+                            Name = "modernMapHost",
+                        };
+                        map3DSplitContainer.Panel1.Controls.Add(modernMapHost);
+                        modernMapHost.BringToFront();
                     }
-                }
 
-                modernMapHost.Controls.Clear();
-                modernMapHost.Controls.Add(map3DControl);
-                modernMapHost.Visible = true;
-                gMapControl1.Visible = false;
+                    if (map3DControl == null || map3DControl.IsDisposed)
+                    {
+                        Dispose3DMap();
+                        map3DControl = new Map3D { Dock = DockStyle.Fill };
+                        ThemeManager.ApplyThemeTo(map3DControl);
+
+                        if (gMapControl1.Position.Lat != 0 && gMapControl1.Position.Lng != 0)
+                        {
+                            var pos = gMapControl1.Position;
+                            var terrainAlt = srtm.getAltitude(pos.Lat, pos.Lng).alt;
+                            map3DControl.LocationCenter = new PointLatLngAlt(pos.Lat, pos.Lng, terrainAlt + 100, "init");
+                        }
+                    }
+
+                    modernMapHost.Controls.Clear();
+                    modernMapHost.Controls.Add(map3DControl);
+                    modernMapHost.Visible = true;
+                    gMapControl1.Visible = false;
+                }
+                catch (Exception ex)
+                {
+                    log.Error("Failed to enable Modern UI Map renderer", ex);
+                    if (CB_modernMap != null && CB_modernMap.Checked)
+                        CB_modernMap.Checked = false;
+                    gMapControl1.Visible = true;
+                    CustomMessageBox.Show("Modern UI Map is not supported by this GPU/driver. Falling back to legacy map renderer.");
+                }
             }
             else
             {
