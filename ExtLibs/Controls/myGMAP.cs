@@ -1,6 +1,5 @@
 ﻿using GMap.NET;
 using GMap.NET.WindowsForms;
-using GMap.NET.WindowsForms.Markers;
 using MissionPlanner.Utilities;
 using System;
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ namespace MissionPlanner.Controls
     public class myGMAP : GMap.NET.WindowsForms.GMapControl
     {
         public bool inOnPaint = false;
-        string otherthread = "";
         int lastx = 0;
         int lasty = 0;
         private DateTime _lastUserInteractionUtc = DateTime.MinValue;
@@ -36,71 +34,37 @@ namespace MissionPlanner.Controls
             GestureHappened += MyGMAP_GestureHappened;
         }
 
-        GMapMarker p1 = new GMarkerGoogle(PointLatLng.Empty, GMarkerGoogleType.blue_small);
-        GMapMarker p2 = new GMarkerGoogle(PointLatLng.Empty, GMarkerGoogleType.blue_small);
-
         private void MyGMAP_GestureHappened(object sender, GestureEventArgs e)
         {
             _lastUserInteractionUtc = DateTime.UtcNow;
 
             if(e.Operation == Gestures.Pan)
             {
-                p1.Position = e.FirstPointLL;
-                p2.Position = e.SecondPointLL;
-                Overlays.First().Markers.Add(p1);
-                Overlays.First().Markers.Add(p2);
-
-                //Core.Position = e.FirstPointLL;
-
-                PointLatLng point = FromLocalToLatLng(e.SecondPoint.X, e.SecondPoint.Y);
-
-                double latdif = e.FirstPointLL.Lat - point.Lat;
-                double lngdif = e.FirstPointLL.Lng - point.Lng;
-
-                //Position = new PointLatLng(Position.Lat + latdif,
-                  //  Position.Lng + lngdif);
+                // Gesture pan is handled by the base map control.
             }
             if(e.Operation== Gestures.Zoom)
             {
                 // aim is to get the ll listed under the users finger
 
-                var startlocal = FromLatLngToLocal(e.FirstPointLL);
-
-                p1.Position = e.FirstPointLL;
-                p2.Position = e.SecondPointLL;
-                Overlays.First().Markers.Add(p1);
-                Overlays.First().Markers.Add(p2);
-
-
                 var scale = e.DistanceBetweenNow / (float)e.DistanceBetweenStart;
 
                 // use the start center as our center;
-                //Position = FromLocalToLatLng((int)startlocal.X, (int)startlocal.Y);
                 Core.Position = e.FirstPointLL;
-                //Core.mouseLastZoom.X = e.SecondPoint.X;
-                //Core.mouseLastZoom.Y = e.SecondPoint.Y;
 
                 Core.MouseWheelZooming = true;
                 Zoom += (scale - 1);
                 Core.MouseWheelZooming = false;
 
                 iArguments = e.DistanceBetweenNow;
-
-                Console.WriteLine("zoom " + e.FirstPoint + " " + e.SecondPoint + " ") ;
             }
         }
 
         protected override void OnPaint(System.Windows.Forms.PaintEventArgs e)
         {
-            var start = DateTime.Now;
-
             if (inOnPaint)
             {
-                Console.WriteLine("Was in onpaint Gmap th:" + System.Threading.Thread.CurrentThread.Name + " in " + otherthread);
                 return;
             }
-
-            otherthread = System.Threading.Thread.CurrentThread.Name;
 
             inOnPaint = true;
 
@@ -108,13 +72,9 @@ namespace MissionPlanner.Controls
             {
                 base.OnPaint(e);
             }
-            catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+            catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
 
             inOnPaint = false;
-
-            var end = DateTime.Now;
-
-            System.Diagnostics.Debug.WriteLine("map draw time " + (end-start).TotalMilliseconds);
         }
 
         protected override void OnInvalidated(InvalidateEventArgs e)
@@ -167,7 +127,7 @@ namespace MissionPlanner.Controls
 
                 base.OnMouseMove(e);
             }
-            catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+            catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
