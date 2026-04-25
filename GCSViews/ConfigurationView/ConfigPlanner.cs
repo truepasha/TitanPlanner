@@ -1011,7 +1011,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private void BUT_Joystick_Click(object sender, EventArgs e)
         {
-            new JoystickSetup().ShowUserControl();
+            JoystickSetupRenderer.ShowWindow();
         }
 
         private void CMB_distunits_SelectedIndexChanged(object sender, EventArgs e)

@@ -2054,7 +2054,7 @@ namespace MissionPlanner.GCSViews
 
         private void BUT_joystick_Click(object sender, EventArgs e)
         {
-            new JoystickSetup().ShowUserControl();
+            JoystickSetupRenderer.ShowWindow();
         }
 
 
