@@ -7,8 +7,8 @@
     <Authors>Michael Oborne</Authors>
     <Version>1.0.0</Version>
     <Company>Michael Oborne</Company>
-    <Product>MissionPlanner-Plus</Product>
-    <Description>MissionPlanner-Plus ground control station for ArduPilot</Description>
+    <Product>MissionPlannerPlus</Product>
+    <Description>MissionPlannerPlus ground control station for ArduPilot</Description>
     <Copyright>Copyright © Michael Oborne 2010-2026</Copyright>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -37,7 +37,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Platforms>AnyCPU;x64</Platforms>
-    <AssemblyName>MissionPlanner-Plus</AssemblyName>
+    <AssemblyName>MissionPlannerPlus</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <OutputPath>bin\Debug\net461\</OutputPath>
@@ -66,7 +66,6 @@
     <WarningsAsErrors>$(WarningsAsErrors);</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="APMPlannerXplanes\**" />
     <Compile Remove="ExtLibs\**" />
     <Compile Remove="MissionPlannerTests\**" />
     <Compile Remove="Msi\**" />
@@ -75,7 +74,6 @@
     <Compile Remove="SikRadio\**" />
     <Compile Remove="Updater\**" />
     <Compile Remove="wix\**" />
-    <EmbeddedResource Remove="APMPlannerXplanes\**" />
     <EmbeddedResource Remove="ExtLibs\**" />
     <EmbeddedResource Remove="MissionPlannerTests\**" />
     <EmbeddedResource Remove="Msi\**" />
@@ -84,7 +82,6 @@
     <EmbeddedResource Remove="SikRadio\**" />
     <EmbeddedResource Remove="Updater\**" />
     <EmbeddedResource Remove="wix\**" />
-    <None Remove="APMPlannerXplanes\**" />
     <None Remove="ExtLibs\**" />
     <None Remove="MissionPlannerTests\**" />
     <None Remove="Msi\**" />

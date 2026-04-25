@@ -24,7 +24,7 @@ namespace MissionPlanner.GCSViews
             {
             }
 
-            if (Program.WindowsStoreApp)
+            if (Program.WindowsStoreApp || !Utilities.Update.IsUpdateFeatureEnabled())
             {
                 BUT_betaupdate.Visible = false;
                 BUT_updatecheck.Visible = false;
@@ -35,7 +35,7 @@ namespace MissionPlanner.GCSViews
         {
             try
             {
-                if (Program.WindowsStoreApp)
+                if (Program.WindowsStoreApp || !Utilities.Update.IsUpdateFeatureEnabled())
                 {
                     return;
                 }
@@ -67,6 +67,9 @@ namespace MissionPlanner.GCSViews
         {
             try
             {
+                if (!Utilities.Update.IsUpdateFeatureEnabled())
+                    return;
+
                 Utilities.Update.dobeta = true;
                 if (Control.ModifierKeys == Keys.Control)
                 {

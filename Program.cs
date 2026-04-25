@@ -150,12 +150,12 @@ namespace MissionPlanner
             return string.Concat(filename.Split(Path.GetInvalidFileNameChars()));
         }
 
-        private static void HandleMissionPlannerPlusUpgrade()
+        private static void HandleMissionPlannerPlusBranding()
         {
-            // Check for MissionPlanner-Plus edition marker
+            // Check for MissionPlannerPlus edition marker
             if (Settings.Instance["mpplus_edition"] == null)
             {
-                // Set MissionPlanner-Plus default theme
+                // Set MissionPlannerPlus default theme
                 Settings.Instance["theme"] = "BurntKermit.mpsystheme";
 
                 // Show tabs by default
@@ -183,13 +183,13 @@ namespace MissionPlanner
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Start(string[] args)
         {
-            HandleMissionPlannerPlusUpgrade();
+            HandleMissionPlannerPlusBranding();
             Program.args = args;
             Console.WriteLine(
                 "If your error is about Microsoft.DirectX.DirectInput, please install the latest directx redist from here http://www.microsoft.com/en-us/download/details.aspx?id=35 \n\n");
-            Console.WriteLine("Debug under mono    MONO_LOG_LEVEL=debug mono MissionPlanner-Plus.exe");
+            Console.WriteLine("Debug under mono    MONO_LOG_LEVEL=debug mono MissionPlannerPlus.exe");
             Console.WriteLine("To fix any filename case issues under mono use    export MONO_IOMAP=drive:case");
-            Console.WriteLine("for pinvoke      MONO_LOG_LEVEL=debug MONO_LOG_MASK=dll mono MissionPlanner-Plus.exe");
+            Console.WriteLine("for pinvoke      MONO_LOG_LEVEL=debug MONO_LOG_MASK=dll mono MissionPlannerPlus.exe");
 
             Console.WriteLine("watch -n 1 ls -l /proc/$(pidof mono)/fd");
             Console.WriteLine("watch -n 1 lsof -p $(pidof mono)");
@@ -264,7 +264,7 @@ namespace MissionPlanner
                 return;
             }
 
-            name = "MissionPlanner-Plus";
+            name = "MissionPlannerPlus";
 
             try
             {

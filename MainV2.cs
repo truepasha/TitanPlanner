@@ -608,7 +608,6 @@ namespace MissionPlanner
         public void updateLayout(object sender, EventArgs e)
         {
             MenuSimulation.Visible = DisplayConfiguration.displaySimulation;
-            MenuHelp.Visible = false;
             MissionPlanner.Controls.BackstageView.BackstageView.Advanced = DisplayConfiguration.isAdvancedMode;
 
             // force autohide on
@@ -1182,7 +1181,7 @@ namespace MissionPlanner
                 ? $"{versionParts[0]}.{versionParts[1]}.{versionParts[2]}"
                 : Application.ProductVersion;
 
-            return $"MissionPlanner-Plus (v{shortVersion})";
+            return $"MissionPlannerPlus (v{shortVersion})";
         }
 
         void comPort_MavChanged(object sender, EventArgs e)
@@ -1259,7 +1258,6 @@ namespace MissionPlanner
             MenuSimulation.Image = ThemeManager.RecolorMenuIcon(Properties.Resources.icon_sitl);
             MenuConfigTune.Image = ThemeManager.RecolorMenuIcon(Properties.Resources.icon_config);
             MenuConnect.Image = displayicons.connect;
-            MenuHelp.Image = ThemeManager.RecolorMenuIcon(displayicons.help);
 
 
             MenuFlightData.ForeColor = ThemeManager.TextColor;
@@ -1268,7 +1266,6 @@ namespace MissionPlanner
             MenuSimulation.ForeColor = ThemeManager.TextColor;
             MenuConfigTune.ForeColor = ThemeManager.TextColor;
             MenuConnect.ForeColor = ThemeManager.TextColor;
-            MenuHelp.ForeColor = ThemeManager.TextColor;
         }
 
         void adsb_UpdatePlanePosition(object sender, MissionPlanner.Utilities.adsb.PointLatLngAltHdg adsb)
@@ -3900,12 +3897,12 @@ namespace MissionPlanner
             try
             {
                 // single update check per day - in a seperate thread
-                if (Settings.Instance["update_check"] != DateTime.Now.ToShortDateString())
+                if (Utilities.Update.IsUpdateFeatureEnabled() && Settings.Instance["update_check"] != DateTime.Now.ToShortDateString())
                 {
                     System.Threading.ThreadPool.QueueUserWorkItem(checkupdate);
                     Settings.Instance["update_check"] = DateTime.Now.ToShortDateString();
                 }
-                else if (Settings.Instance.GetBoolean("beta_updates") == true)
+                else if (Utilities.Update.IsUpdateFeatureEnabled() && Settings.Instance.GetBoolean("beta_updates") == true)
                 {
                     MissionPlanner.Utilities.Update.dobeta = true;
                     System.Threading.ThreadPool.QueueUserWorkItem(checkupdate);
@@ -4367,12 +4364,6 @@ namespace MissionPlanner
 
             log.Info("this   width " + this.Width + " height " + this.Height);
         }
-
-        private void MenuHelp_Click(object sender, EventArgs e)
-        {
-            MyView.ShowScreen("Help");
-        }
-
 
         /// <summary>
         /// keyboard shortcuts override

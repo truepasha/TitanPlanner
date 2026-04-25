@@ -294,7 +294,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             try
             {
-                if (Program.WindowsStoreApp)
+                if (Program.WindowsStoreApp || !Utilities.Update.IsUpdateFeatureEnabled())
                 {
                     return;
                 }
@@ -310,6 +310,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             try
             {
+                if (!Utilities.Update.IsUpdateFeatureEnabled())
+                    return;
+
                 Utilities.Update.dobeta = true;
                 if (Control.ModifierKeys == Keys.Control)
                 {
