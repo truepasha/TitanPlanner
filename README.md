@@ -223,12 +223,35 @@ See [COPYING.txt](COPYING.txt) for details.
 ---
 
 ## Building the Installer
-* Setup Wix toolset
-* Switch to Release mode
-* Clean Solution -> Build a release version of MissionPlanner -> Build solution
-* Copy Drivers into Msi folder so it lives in \Msi\Drivers
-* Build the 'wix' project from the MissionPlanner solution, which outputs to the Msi folder of the repo
-* Go to the Msi folder
-* Run installer.bat
-* Run create.bat
+### Prerequisites
+* Visual Studio 2022 (Community/Pro) with the workloads from `vs2022.vsconfig`
+* WiX Toolset **v3.14**
+* Git submodules initialized (`git submodule update --init --recursive`)
 
+### Build `MissionPlanner-Plus` MSI in Visual Studio
+1. Open `MissionPlanner.sln` in Visual Studio 2022.
+2. In the toolbar:
+   * Set **Configuration** = `Release`
+   * Set **Platform** = `Any CPU`
+3. Build the main app first:
+   * **Build → Build MissionPlanner**
+   * Confirm `bin\Release\net461\MissionPlanner-Plus.exe` exists.
+4. Build the MSI generator project:
+   * In **Solution Explorer**, right-click project `wix` → **Build**
+   * This produces `Msi\net472\wix.exe`.
+5. Open `Msi\installer.bat` and ensure it points to `.\net472\wix.exe` (already configured in this repo).
+6. Open **Developer Command Prompt for VS 2022** and run:
+   ```bat
+   cd <repo>\Msi
+   installer.bat
+   create.bat
+   ```
+7. MSI artifact will be generated in `Msi\` as:
+   * `MissionPlannerPlus-<version>.msi`
+   * and symlink-style latest name from `create.bat`.
+
+### Notes / Common pitfalls
+* If `installer.bat` says `wix.exe not recognized`, rebuild the `wix` project and verify `Msi\net472\wix.exe` exists.
+* If WiX tools are missing at `create.bat` stage, set env var:
+  * `set wix=C:\Program Files (x86)\WiX Toolset v3.14`
+* The installer branding in this fork is `MissionPlanner-Plus` (product name, Start Menu shortcut, uninstall entry).
