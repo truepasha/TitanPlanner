@@ -66,7 +66,6 @@
     <WarningsAsErrors>$(WarningsAsErrors);</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="APMPlannerXplanes\**" />
     <Compile Remove="ExtLibs\**" />
     <Compile Remove="MissionPlannerTests\**" />
     <Compile Remove="Msi\**" />
@@ -75,7 +74,6 @@
     <Compile Remove="SikRadio\**" />
     <Compile Remove="Updater\**" />
     <Compile Remove="wix\**" />
-    <EmbeddedResource Remove="APMPlannerXplanes\**" />
     <EmbeddedResource Remove="ExtLibs\**" />
     <EmbeddedResource Remove="MissionPlannerTests\**" />
     <EmbeddedResource Remove="Msi\**" />
@@ -84,7 +82,6 @@
     <EmbeddedResource Remove="SikRadio\**" />
     <EmbeddedResource Remove="Updater\**" />
     <EmbeddedResource Remove="wix\**" />
-    <None Remove="APMPlannerXplanes\**" />
     <None Remove="ExtLibs\**" />
     <None Remove="MissionPlannerTests\**" />
     <None Remove="Msi\**" />
