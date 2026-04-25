@@ -36,8 +36,26 @@ namespace MissionPlanner.Utilities
             client.Timeout = TimeSpan.FromSeconds(30);
         }
 
+        public static bool IsUpdateFeatureEnabled()
+        {
+            var enabledSetting = ConfigurationManager.AppSettings["EnableInAppUpdates"];
+            return string.Equals(enabledSetting, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EnsureUpdateFeatureEnabled()
+        {
+            if (IsUpdateFeatureEnabled())
+                return true;
+
+            CustomMessageBox.Show("Online updates are disabled in MissionPlannerPlus build.");
+            return false;
+        }
+
         public static void updateCheckMain(IProgressReporterDialogue frmProgressReporter)
         {
+            if (!EnsureUpdateFeatureEnabled())
+                return;
+
             var t = Type.GetType("Mono.Runtime");
             MONO = (t != null);
 
@@ -114,6 +132,9 @@ namespace MissionPlanner.Utilities
 
         public static void CheckForUpdate(bool NotifyNoUpdate = false)
         {
+            if (!IsUpdateFeatureEnabled())
+                return;
+
             var baseurl = ConfigurationManager.AppSettings["UpdateLocationVersion"];
 
             if (dobeta)
@@ -221,6 +242,9 @@ namespace MissionPlanner.Utilities
 
         public static void DoUpdate()
         {
+            if (!EnsureUpdateFeatureEnabled())
+                return;
+
             if (Program.WindowsStoreApp)
             {
                 CustomMessageBox.Show(Strings.Not_available_when_used_as_a_windows_store_app);
