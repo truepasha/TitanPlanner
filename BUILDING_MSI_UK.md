@@ -65,4 +65,4 @@
    git submodule update --init --recursive
    ```
 
-У цьому репо також додано виправлення, яке не передає властивості `AppendTargetFrameworkToOutputPath` у `ProjectReference`, а для `7zip`/`ZedGraph` вимкнено автогенерацію `TargetFrameworkAttribute`, щоб прибрати дублікати й збирати залежності у правильні шляхи.
+У цьому репо також прибрано форсування `AppendTargetFrameworkToOutputPath/AppendRuntimeIdentifierToOutputPath` у головному проєкті, а для `7zip`/`ZedGraph` вимкнено автогенерацію `TargetFrameworkAttribute`, щоб прибрати дублікати й збирати залежності у правильні шляхи.
