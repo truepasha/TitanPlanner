@@ -53,7 +53,7 @@ jobs:
           $msbuildPath = Split-Path (& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\Current\Bin\amd64\MSBuild.exe | Select-Object -First 1) -Parent
           $env:PATH = $msbuildPath + ';' + $env:PATH
           nuget locals all -clear
-          msbuild -v:m -restore -t:Build -p:Configuration=${{ inputs.configuration }} MissionPlanner.sln
+          msbuild -v:m -restore -t:Clean,Build -p:Configuration=${{ inputs.configuration }} MissionPlanner.sln
 
       - name: Package app folder + checksums
         shell: pwsh

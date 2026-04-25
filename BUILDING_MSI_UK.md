@@ -50,3 +50,19 @@
 Є два варіанти:
 - **Artifacts only**: просто скачати MSI з Actions.
 - **GitHub Release**: у workflow ввімкнути `upload_release=true`, вказати tag/name, і файл прикріпиться до Release автоматично.
+
+## Якщо бачите помилки `Duplicate TargetFrameworkAttribute` або не знаходить `7zip.dll`
+
+Ознаки проблеми:
+- `Duplicate 'global::System.Runtime.Versioning.TargetFrameworkAttribute' attribute`
+- `Could not find file ... ExtLibs\\7zip\\bin\\Release\\netstandard2.0\\7zip.dll`
+
+Що робити:
+1. Обов'язково зробіть **Clean Solution** і потім **Rebuild Solution**.
+2. Якщо не допомогло — закрийте VS і видаліть `bin/obj` у корені та в `ExtLibs/7zip`, `ExtLibs/ZedGraph`.
+3. Перевірте, що підмодулі підтягнуті повністю:
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+У цьому репо також додано виправлення, яке не передає властивості `AppendTargetFrameworkToOutputPath` у `ProjectReference`, щоб залежності з multi-target (зокрема 7zip/ZedGraph) збирались у правильні шляхи.
