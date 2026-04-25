@@ -3060,6 +3060,10 @@ void main(void) {
             private int _texHeight = 0;
             private bool _dirty = true;
             private const int Padding = 8;
+            // _program states:
+            //  0  => not created yet
+            // >0  => valid GL program id
+            // -1  => unsupported on current GL driver/context (disable overlay path)
             private static int _program = 0;
             private static int _posSlot = 0;
             private static int _texSlot = 0;
@@ -3099,6 +3103,8 @@ void main(void) {
                     return;
 
                 EnsureProgram();
+                if (_program <= 0)
+                    return;
 
                 // Convert pixel coords to NDC [-1, 1], origin top-left in pixels.
                 float left = -1f + (2f * Padding / control.Width);
@@ -3214,12 +3220,17 @@ void main(void) {
                 GL.GetShader(vShader, ShaderParameter.CompileStatus, out var code);
                 if (code != (int)All.True)
                 {
-                    throw new Exception($"Overlay vertex shader compile error: {GL.GetShaderInfoLog(vShader)}");
+                    Debug.WriteLine($"Overlay vertex shader compile error: {GL.GetShaderInfoLog(vShader)}");
+                    _program = -1;
+                    GL.DeleteShader(vShader);
+                    return;
                 }
 
                 int fShader = GL.CreateShader(ShaderType.FragmentShader);
                 GL.ShaderSource(fShader, @"
+#ifdef GL_ES
 precision mediump float;
+#endif
 varying vec2 TexCoord;
 uniform sampler2D Texture;
 void main(void) {
@@ -3229,7 +3240,11 @@ void main(void) {
                 GL.GetShader(fShader, ShaderParameter.CompileStatus, out code);
                 if (code != (int)All.True)
                 {
-                    throw new Exception($"Overlay fragment shader compile error: {GL.GetShaderInfoLog(fShader)}");
+                    Debug.WriteLine($"Overlay fragment shader compile error: {GL.GetShaderInfoLog(fShader)}");
+                    _program = -1;
+                    GL.DeleteShader(vShader);
+                    GL.DeleteShader(fShader);
+                    return;
                 }
 
                 _program = GL.CreateProgram();
@@ -3239,7 +3254,12 @@ void main(void) {
                 GL.GetProgram(_program, GetProgramParameterName.LinkStatus, out code);
                 if (code != (int)All.True)
                 {
-                    throw new Exception($"Overlay program link error: {GL.GetProgramInfoLog(_program)}");
+                    Debug.WriteLine($"Overlay program link error: {GL.GetProgramInfoLog(_program)}");
+                    GL.DeleteProgram(_program);
+                    _program = -1;
+                    GL.DeleteShader(vShader);
+                    GL.DeleteShader(fShader);
+                    return;
                 }
 
                 _posSlot = GL.GetAttribLocation(_program, "Position");
